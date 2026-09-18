@@ -1,0 +1,10 @@
+.DS_Store
+.netlify/
+node_modules/
+outputs/
+*.json
+*.zip
+*.png
+.env
+.env.*
+

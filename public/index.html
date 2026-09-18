@@ -1,0 +1,3433 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>调仓计算器 v1.3</title>
+  <style>
+    :root {
+      --page: #f0f6fb;
+      --surface: #ffffff;
+      --surface-soft: #f7fafc;
+      --text: #142536;
+      --muted: #586b7d;
+      --border: #cfdae5;
+      --border-strong: #aebfce;
+      --primary: #075f8f;
+      --primary-hover: #064d74;
+      --primary-soft: #e7f4fb;
+      --positive: #147d4a;
+      --positive-soft: #e8f7ef;
+      --negative: #b74717;
+      --negative-soft: #fff0e8;
+      --danger: #b42318;
+      --danger-soft: #fff0ef;
+      --warning: #915d00;
+      --warning-soft: #fff7df;
+      --ring: #0b76b2;
+      --shadow: 0 12px 32px rgba(27, 64, 95, 0.08);
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+      --space-7: 48px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    html {
+      min-width: 1024px;
+      background: var(--page);
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(14, 165, 233, 0.09), transparent 27rem),
+        var(--page);
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      font-variant-numeric: tabular-nums;
+    }
+
+    body.startup-open {
+      overflow: hidden;
+    }
+
+    .startup-gate {
+      position: fixed;
+      z-index: 1000;
+      inset: 0;
+      display: grid;
+      align-items: start;
+      justify-items: center;
+      overflow-y: auto;
+      padding: 32px;
+      background: rgba(20, 40, 58, 0.48);
+      backdrop-filter: blur(8px);
+    }
+
+    @media (min-height: 620px) {
+      .startup-gate {
+        align-items: center;
+      }
+    }
+
+    .startup-dialog {
+      width: min(560px, 100%);
+      padding: 32px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 24px 70px rgba(15, 35, 52, 0.24);
+    }
+
+    .startup-icon {
+      display: grid;
+      width: 52px;
+      height: 52px;
+      margin-bottom: 20px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border: 1px solid #9ed1e9;
+      border-radius: 14px;
+      place-items: center;
+    }
+
+    .startup-icon svg {
+      width: 27px;
+      height: 27px;
+    }
+
+    .startup-dialog h2 {
+      margin-bottom: 10px;
+      font-size: 26px;
+      line-height: 1.25;
+    }
+
+    .startup-dialog p {
+      margin-bottom: 0;
+      color: var(--muted);
+    }
+
+    .startup-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .startup-actions .button {
+      min-height: 46px;
+    }
+
+    #startup-continue-button {
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    #startup-continue-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .startup-message {
+      min-height: 24px;
+      margin-top: 16px;
+      color: var(--danger);
+      font-size: 14px;
+    }
+
+    .startup-note {
+      padding-top: 18px;
+      margin-top: 18px !important;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    :focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--ring) 55%, transparent);
+      outline-offset: 2px;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 20;
+      top: 8px;
+      left: 8px;
+      padding: 10px 14px;
+      color: white;
+      background: var(--primary);
+      border-radius: var(--radius-sm);
+      transform: translateY(-150%);
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    .app-shell {
+      width: min(1480px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 36px 0 64px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-6);
+      margin-bottom: var(--space-5);
+    }
+
+    .hero-copy {
+      max-width: 820px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: var(--primary);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      font-size: clamp(34px, 3vw, 46px);
+      line-height: 1.16;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      max-width: 760px;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .offline-badge {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 9px;
+      min-height: 42px;
+      padding: 9px 14px;
+      color: #145f40;
+      background: #eaf8f0;
+      border: 1px solid #b8e4ca;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .offline-badge svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .notice {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      margin-bottom: var(--space-5);
+      padding: 14px 16px;
+      color: #62430b;
+      background: var(--warning-soft);
+      border: 1px solid #efd99b;
+      border-radius: var(--radius-md);
+    }
+
+    .notice svg {
+      flex: 0 0 auto;
+      width: 21px;
+      height: 21px;
+      margin-top: 1px;
+    }
+
+    .notice p {
+      margin: 0;
+    }
+
+    .card {
+      margin-bottom: var(--space-5);
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-5);
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 21px;
+      line-height: 1.3;
+    }
+
+    .card-description {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .settings-card .card-header > div:first-child {
+      flex: 1 1 320px;
+      min-width: 240px;
+    }
+
+    .settings-card .toolbar {
+      flex: 1 1 720px;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .save-meta {
+      flex: 1 1 160px;
+      min-width: 0;
+      max-width: 280px;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 9px 15px;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      font-weight: 700;
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .button:hover:not(:disabled) {
+      background: var(--surface-soft);
+      border-color: #8fa5b8;
+    }
+
+    .button-primary {
+      color: white;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .button-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .button-soft {
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: #9ed1e9;
+    }
+
+    .button-danger {
+      color: var(--danger);
+      background: var(--surface);
+      border-color: #e5b5b0;
+    }
+
+    .button svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(160px, 1fr));
+      gap: var(--space-4);
+      padding: 20px 24px 24px;
+    }
+
+    .field {
+      min-width: 0;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .field-hint {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .input,
+    .table-input {
+      width: 100%;
+      color: var(--text);
+      background: white;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+    }
+
+    .input {
+      min-height: 42px;
+      padding: 9px 12px;
+    }
+
+    .input:hover,
+    .table-input:hover {
+      border-color: #7e98ad;
+    }
+
+    .input:focus,
+    .table-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(7, 95, 143, 0.12);
+      outline: none;
+    }
+
+    .input[aria-invalid="true"],
+    .table-input[aria-invalid="true"] {
+      background: var(--danger-soft);
+      border-color: var(--danger);
+    }
+
+    .table-input[readonly] {
+      color: #3f5365;
+      background: #f1f5f8;
+      border-color: #d5dfe7;
+      cursor: default;
+    }
+
+    .table-input[readonly]:hover {
+      border-color: #d5dfe7;
+    }
+
+    .input-prefix {
+      position: relative;
+    }
+
+    .input-prefix .input {
+      padding-left: 34px;
+    }
+
+    .prefix-label {
+      position: absolute;
+      top: 50%;
+      left: 12px;
+      color: var(--muted);
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 13px 10px;
+      text-align: left;
+      vertical-align: middle;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: #43586b;
+      background: #f3f7fa;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr:hover {
+      background: #fbfdff;
+    }
+
+    .holdings-table {
+      min-width: 1000px;
+      table-layout: fixed;
+    }
+
+    .holdings-table th,
+    .holdings-table td {
+      padding: 12px 7px;
+    }
+
+    .holdings-table th {
+      text-align: center;
+    }
+
+    .holdings-table th:first-child {
+      text-align: left;
+    }
+
+    .holdings-table th:first-child,
+    .holdings-table td:first-child {
+      padding-left: 18px;
+    }
+
+    .holdings-table th:last-child,
+    .holdings-table td:last-child {
+      padding-right: 18px;
+    }
+
+    .table-input {
+      min-height: 39px;
+      padding: 8px 7px;
+    }
+
+    .table-input[type="number"] {
+      text-align: center;
+    }
+
+    .asset-code {
+      text-align: center;
+    }
+
+    .price-cell {
+      position: relative;
+    }
+
+    .price-cell .table-input {
+      padding-right: 33px;
+    }
+
+    .price-unit {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .price-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      min-width: 148px;
+    }
+
+    .compact-field {
+      min-width: 0;
+    }
+
+    .compact-field label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .price-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 7px;
+      white-space: nowrap;
+    }
+
+    .source-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .source-label {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      min-height: 24px;
+      padding: 2px 8px;
+      color: #4b6073;
+      background: #eef3f7;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .source-label.network {
+      color: #0b5c3a;
+      background: var(--positive-soft);
+    }
+
+    .source-label.error {
+      color: var(--danger);
+      background: var(--danger-soft);
+    }
+
+    .source-time {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .price-meta .source-label {
+      min-height: 21px;
+      padding: 1px 7px;
+      font-size: 11px;
+    }
+
+    .price-meta .source-time {
+      overflow: hidden;
+      font-size: 11px;
+      text-overflow: ellipsis;
+    }
+
+    .holding-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      min-width: 88px;
+      text-align: center;
+    }
+
+    .holding-stat-primary {
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .holding-stat-secondary {
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .holding-stat.gain .holding-stat-primary,
+    .holding-stat.gain .holding-stat-secondary {
+      color: #b83a32;
+    }
+
+    .holding-stat.loss .holding-stat-primary,
+    .holding-stat.loss .holding-stat-secondary {
+      color: #147553;
+    }
+
+    .target-total.over-limit {
+      color: var(--danger);
+    }
+
+    .icon-button {
+      display: inline-grid;
+      width: 40px;
+      height: 40px;
+      place-items: center;
+      color: #6d7f8e;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+    }
+
+    .icon-button:hover:not(:disabled) {
+      color: var(--danger);
+      background: var(--danger-soft);
+      border-color: #efc4bf;
+    }
+
+    .row-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .clear-position {
+      min-height: 34px;
+      padding: 5px 8px;
+      color: var(--danger);
+      background: var(--danger-soft);
+      border: 1px solid #efbbb5;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      transition: background-color 160ms ease, border-color 160ms ease, opacity 160ms ease;
+    }
+
+    .clear-position:hover:not(:disabled) {
+      background: #ffe4e1;
+      border-color: #dc8f87;
+    }
+
+    .clear-position:disabled {
+      color: #7d5b58;
+      background: #f3eeed;
+      border-color: #ddd1cf;
+      opacity: 1;
+    }
+
+    .icon-button svg {
+      width: 19px;
+      height: 19px;
+    }
+
+    .table-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      padding: 16px 24px;
+      background: var(--surface-soft);
+      border-top: 1px solid var(--border);
+    }
+
+    .layer-total {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .layer-total strong {
+      color: var(--text);
+    }
+
+    .status-region {
+      display: none;
+      margin: 0 24px 20px;
+      padding: 13px 15px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+
+    .status-region.visible {
+      display: block;
+    }
+
+    .status-region.info {
+      color: #174f70;
+      background: var(--primary-soft);
+      border-color: #acd6ea;
+    }
+
+    .status-region.success {
+      color: #145f40;
+      background: var(--positive-soft);
+      border-color: #b8e4ca;
+    }
+
+    .status-region.error {
+      color: var(--danger);
+      background: var(--danger-soft);
+      border-color: #efbbb5;
+    }
+
+    .error-summary {
+      display: none;
+      margin-bottom: var(--space-5);
+      padding: 16px 18px;
+      color: var(--danger);
+      background: var(--danger-soft);
+      border: 1px solid #efb8b2;
+      border-radius: var(--radius-md);
+    }
+
+    .error-summary.visible {
+      display: block;
+    }
+
+    .error-summary h2 {
+      margin-bottom: 6px;
+      font-size: 17px;
+    }
+
+    .error-summary ul {
+      margin: 0;
+      padding-left: 22px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: var(--space-3);
+      padding: 20px 24px 24px;
+    }
+
+    .metric {
+      min-height: 116px;
+      padding: 16px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+
+    .metric-label {
+      display: block;
+      margin-bottom: 9px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .metric-value {
+      display: block;
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+
+    .metric-hint {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .results-card[hidden] {
+      display: none;
+    }
+
+    .result-section {
+      padding: 0 24px 24px;
+    }
+
+    .result-section + .result-section {
+      padding-top: 22px;
+      border-top: 1px solid var(--border);
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin-bottom: 12px;
+    }
+
+    .section-heading h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .result-table {
+      min-width: 920px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+    }
+
+    .execution-table {
+      min-width: 1320px;
+    }
+
+    .result-table th,
+    .result-table td {
+      padding: 11px 12px;
+    }
+
+    .result-table td.number,
+    .result-table th.number {
+      text-align: right;
+    }
+
+    .result-asset-name {
+      display: block;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .result-code,
+    .execution-secondary {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .share-flow,
+    .execution-price-estimate {
+      white-space: nowrap;
+    }
+
+    .execution-price-input {
+      min-width: 104px;
+      text-align: right !important;
+    }
+
+    .execution-not-required {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .trade-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 86px;
+      min-height: 30px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .order-checklist {
+      padding: 24px;
+    }
+    .order-checklist h3 {
+      margin-bottom: 8px;
+    }
+    .order-groups {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 18px;
+    }
+    .order-group {
+      min-width: 0;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .order-group h4 {
+      margin: 0;
+      padding: 14px 18px;
+      font-size: 21px;
+    }
+    .order-group.sell {
+      border-color: #2671b9;
+    }
+    .order-group.sell h4 {
+      color: #174d86;
+      background: #eaf3ff;
+    }
+    .order-group.buy {
+      border-color: #bd433b;
+    }
+    .order-group.buy h4 {
+      color: #9b2922;
+      background: #fff0ee;
+    }
+    .order-card {
+      padding: 18px;
+      border-top: 1px solid var(--border);
+    }
+    .order-card h5 {
+      margin: 0 0 6px;
+      font-size: 18px;
+    }
+    .order-code {
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+    }
+    .order-direction {
+      margin: 10px 0 4px;
+      font-size: 27px;
+      font-weight: 800;
+    }
+    .sell .order-direction {
+      color: #174d86;
+    }
+    .buy .order-direction {
+      color: #9b2922;
+    }
+    .order-flow {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .order-verify {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .order-verify label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .order-verify select, .order-verify input {
+      width: 100%;
+      min-width: 0;
+      height: 42px;
+      padding: 8px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background: white;
+      color: var(--text);
+      font: inherit;
+    }
+    .order-check-message {
+      margin: 10px 0 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .order-check-message.mismatch {
+      color: #a5221a;
+      font-weight: 700;
+    }
+    .order-card.has-mismatch {
+      background: #fff0ee;
+    }
+    .order-empty {
+      padding: 18px;
+      color: var(--muted);
+      margin: 0;
+    }
+    .execution-review-bar {
+      margin: 0 24px 24px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-soft);
+    }
+    .execution-review-bar p {
+      margin: 0 0 10px;
+    }
+    @media print {
+      .order-verify, .order-check-message, .execution-review-bar {
+        display: none !important;
+      }
+      .order-card {
+        break-inside: avoid;
+      }
+    }
+
+    .trade-badge.buy {
+      color: #9b2922;
+      background: #fff0ee;
+    }
+
+    .trade-badge.sell {
+      color: #174d86;
+      background: #eaf3ff;
+    }
+
+    .trade-badge.hold {
+      color: #516475;
+      background: #edf2f6;
+    }
+
+    .deviation-positive {
+      color: var(--positive);
+      font-weight: 700;
+    }
+
+    .deviation-negative {
+      color: var(--negative);
+      font-weight: 700;
+    }
+
+    .result-footnote {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .footer {
+      padding-top: var(--space-3);
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 1180px) {
+      .app-shell {
+        width: calc(100% - 32px);
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .settings-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media print {
+      html {
+        min-width: 0;
+      }
+
+      body {
+        background: white;
+      }
+
+      .app-shell {
+        width: 100%;
+        padding: 0;
+      }
+
+      .hero,
+      .startup-gate,
+      .notice,
+      .settings-card,
+      .holdings-card,
+      .footer,
+      .recalculate-button,
+      .copy-button,
+      .apply-execution-button {
+        display: none !important;
+      }
+
+      .card {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body class="startup-open">
+  <div class="startup-gate" id="startup-gate" role="dialog" aria-modal="true" aria-labelledby="startup-title" aria-describedby="startup-description" tabindex="-1">
+    <div class="startup-dialog">
+      <div class="startup-icon" aria-hidden="true">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h6l2 2h10v10H3V7zm0 4h18" />
+        </svg>
+      </div>
+      <h2 id="startup-title">正在读取上次的数据</h2>
+      <p id="startup-description">正在检查上次选择的 JSON 数据文件。</p>
+      <div class="startup-actions">
+        <button class="button button-primary" id="startup-continue-button" type="button" hidden disabled>
+          <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span id="startup-continue-label">继续打开上次文件</span>
+        </button>
+        <button class="button button-primary" id="startup-open-button" type="button" disabled>
+          <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h6l2 2h10v10H3V7zm0 4h18" />
+          </svg>
+          选择 JSON 数据
+        </button>
+        <button class="button" id="startup-new-button" type="button" disabled>
+          <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14" />
+          </svg>
+          新建空白组合
+        </button>
+      </div>
+      <div class="startup-message" id="startup-message" role="status" aria-live="polite">正在检查上次选择的 JSON 文件……</div>
+      <p class="startup-note">持仓内容只保存在 JSON 文件中；浏览器仅记住文件访问句柄，不保存持仓副本。</p>
+    </div>
+  </div>
+
+  <a class="skip-link" id="skip-link" href="#main-content" inert>跳到主要内容</a>
+
+  <main class="app-shell" id="main-content" inert>
+    <header class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">
+          <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 18V9m5 9V5m5 13v-7m5 7V3" />
+          </svg>
+          Portfolio Rebalancer
+        </div>
+        <h1>调仓计算器</h1>
+        <p>按目标仓位百分比分配总资产，整体计算最接近目标且资金不超限的整手调仓方案。</p>
+      </div>
+      <div class="offline-badge">
+        <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+        数据保存到你选择的本地文件
+      </div>
+    </header>
+
+    <div class="notice" role="note">
+      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+      </svg>
+      <p><strong>行情仅用于调仓估算。</strong>点击更新时会根据 ETF 代码同步官方名称和当前价格，不会持续刷新；实际下单前请在证券软件中核对。</p>
+    </div>
+
+    <div class="error-summary" id="error-summary" role="alert" tabindex="-1" aria-labelledby="error-title">
+      <h2 id="error-title">请先修正以下问题</h2>
+      <ul id="error-list"></ul>
+    </div>
+
+    <section class="card settings-card" aria-labelledby="settings-title">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="settings-title">账户参数</h2>
+          <p class="card-description">总资产 = 可用现金 + 所有当前持仓市值；预留金额仅限制调仓后的最低现金。</p>
+        </div>
+        <div class="toolbar">
+          <span class="save-meta" id="save-meta">尚未选择数据文件</span>
+          <button class="button button-soft" id="open-data-button" type="button">
+            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h6l2 2h10v10H3V7zm0 4h18" />
+            </svg>
+            打开数据
+          </button>
+          <button class="button button-soft" id="save-button" type="button">
+            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 4h12l2 2v14H5V4zm3 0v6h8V4M8 20v-6h8v6" />
+            </svg>
+            保存数据
+          </button>
+          <button class="button" id="save-as-button" type="button">
+            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14" />
+            </svg>
+            另存为
+          </button>
+          <button class="button button-danger" id="reset-button" type="button">
+            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992V4.356m-.39 5.403a9 9 0 11-2.625-3.786l3.015 3.375" />
+            </svg>
+            新建空白
+          </button>
+        </div>
+      </div>
+      <div class="settings-grid">
+        <div class="field">
+          <label for="available-cash">当前可用现金</label>
+          <div class="input-prefix">
+            <span class="prefix-label" aria-hidden="true">¥</span>
+            <input class="input" id="available-cash" type="number" min="0" step="0.01" value="0" inputmode="decimal">
+          </div>
+          <span class="field-hint">用于检查买入资金是否超限。</span>
+        </div>
+        <div class="field">
+          <label for="reserved-cash">预留金额</label>
+          <div class="input-prefix">
+            <span class="prefix-label" aria-hidden="true">¥</span>
+            <input class="input" id="reserved-cash" type="number" min="0" step="0.01" value="0" inputmode="decimal" aria-describedby="reserved-cash-hint">
+          </div>
+          <span class="field-hint" id="reserved-cash-hint">调仓后至少保留，用于覆盖成交价上涨。</span>
+        </div>
+        <div class="field">
+          <label for="fee-rate">手续费率</label>
+          <div class="input-prefix">
+            <span class="prefix-label" aria-hidden="true">%</span>
+            <input class="input" id="fee-rate" type="number" min="0" step="0.001" value="0" inputmode="decimal">
+          </div>
+          <span class="field-hint">例如 0.03 表示万分之三。</span>
+        </div>
+        <div class="field">
+          <label for="minimum-fee">单笔最低手续费</label>
+          <div class="input-prefix">
+            <span class="prefix-label" aria-hidden="true">¥</span>
+            <input class="input" id="minimum-fee" type="number" min="0" step="0.01" value="0" inputmode="decimal">
+          </div>
+          <span class="field-hint">不确定时可保持 0。</span>
+        </div>
+        <div class="field">
+          <label for="lot-size">每手股数</label>
+          <input class="input" id="lot-size" type="number" min="1" step="1" value="100" inputmode="numeric">
+          <span class="field-hint">所有品种统一使用该交易单位。</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card holdings-card" aria-labelledby="holdings-title">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="holdings-title">持仓与目标仓位</h2>
+          <p class="card-description">限沪深 ETF：5 开头按上海市场，1 开头按深圳市场。最多 8 个品种。</p>
+        </div>
+        <div class="toolbar">
+          <button class="button button-soft" id="fetch-button" type="button">
+            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13a9 9 0 1015.44-6.13M21 3v6h-6" />
+            </svg>
+            <span id="fetch-button-label">更新名称和现价</span>
+          </button>
+          <button class="button button-primary" id="calculate-button" type="button">
+            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m-6 4h6m-6 4h3m-5 6h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <span id="calculate-button-label">计算调仓</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="holdings-table">
+          <caption class="sr-only">当前持仓、目标仓位、价格和盈亏</caption>
+          <colgroup>
+            <col style="width: 14%">
+            <col style="width: 9%">
+            <col style="width: 9%">
+            <col style="width: 9%">
+            <col style="width: 20%">
+            <col style="width: 11%">
+            <col style="width: 11%">
+            <col style="width: 10%">
+            <col style="width: 7%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="col-name" scope="col">品种名称（自动）</th>
+              <th class="col-code" scope="col">ETF 代码</th>
+              <th class="col-number" scope="col">当前股数</th>
+              <th class="col-number" scope="col">目标仓位</th>
+              <th class="col-price" scope="col">成本 / 现价</th>
+              <th class="col-stat" scope="col">盈亏</th>
+              <th class="col-stat" scope="col">当日盈亏</th>
+              <th class="col-position" scope="col">当前仓位</th>
+              <th class="col-action" scope="col">操作</th>
+            </tr>
+          </thead>
+          <tbody id="holdings-body"></tbody>
+        </table>
+      </div>
+
+      <div class="table-footer">
+        <button class="button" id="add-row-button" type="button">
+          <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          添加品种
+        </button>
+        <div>
+          <div class="layer-total target-total" id="target-total-note">目标仓位合计：<strong id="layer-total">0%</strong><span id="target-total-detail"></span></div>
+          <div class="field-hint">有持仓的 ETF 请使用“清仓”；当前股数为 0 的品种才能删除。</div>
+        </div>
+      </div>
+
+      <div class="status-region" id="status-region" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card results-card" id="results-card" aria-labelledby="results-title" hidden>
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="results-title">调仓结果</h2>
+          <p class="card-description" id="result-description">已按整手和资金限制计算。</p>
+        </div>
+        <div class="toolbar">
+          <button class="button button-soft recalculate-button" id="recalculate-button" type="button">
+            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13a9 9 0 1015.44-6.13M21 3v6h-6" />
+            </svg>
+            <span id="recalculate-button-label">刷新现价并重新计算</span>
+          </button>
+          <button class="button copy-button" id="copy-button" type="button">
+            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            复制操作清单
+          </button>
+          <button class="button" id="print-button" type="button">
+            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2m-12-4h12v8H6v-8z" />
+            </svg>
+            打印结果
+          </button>
+        </div>
+      </div>
+
+      <div class="order-checklist">
+        <h3>1. 下单前：逐笔核对方向、代码和股数</h3>
+        <p class="field-hint">对照下面的计划，再检查券商委托确认页。先卖出释放资金，再买入；“下单股数”是本次买卖数量，不是目标持仓股数。</p>
+        <div class="order-groups" id="order-groups"></div>
+      </div>
+
+      <div class="summary-grid" aria-label="调仓摘要">
+        <div class="metric">
+          <span class="metric-label">当前总资产</span>
+          <strong class="metric-value" id="metric-total-assets">--</strong>
+          <span class="metric-hint">持仓市值 + 现金</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">调仓后持仓比例</span>
+          <strong class="metric-value" id="metric-invested-ratio">--</strong>
+          <span class="metric-hint">整手取整后</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">预计剩余现金</span>
+          <strong class="metric-value" id="metric-cash-after">--</strong>
+          <span class="metric-hint" id="metric-cash-after-hint">已扣除估算手续费</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">预计手续费</span>
+          <strong class="metric-value" id="metric-fees">--</strong>
+          <span class="metric-hint">按每个品种一笔交易</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">买卖品种数</span>
+          <strong class="metric-value" id="metric-trade-count">--</strong>
+          <span class="metric-hint">不含保持不动</span>
+        </div>
+      </div>
+
+      <div class="result-section">
+        <div class="section-heading">
+          <h3>2. 成交后：核对券商成交记录</h3>
+        </div>
+        <p class="field-hint">在上方每张卡片填写券商实际成交方向和股数，并在下表核对实际成交价（初始为估算价）。只有全部方向和股数与计划一致，才能写回持仓。重算会清空核对记录；部分成交或方向不符时，请先根据券商记录修正当前持仓，再重新计算。</p>
+        <div class="table-wrap">
+          <table class="result-table execution-table">
+            <caption class="sr-only">调仓操作、实际成交价及预计调仓后仓位</caption>
+            <thead>
+              <tr>
+                <th scope="col">品种</th>
+                <th class="number" scope="col">当前 → 目标股数</th>
+                <th scope="col">操作</th>
+                <th class="number" scope="col">估算价</th>
+                <th class="number" scope="col">实际成交价</th>
+                <th class="number" scope="col">成交金额</th>
+                <th class="number" scope="col">手续费（估）</th>
+                <th class="number" scope="col">目标仓位</th>
+                <th class="number" scope="col">成交后市值 / 仓位</th>
+                <th class="number" scope="col">偏差</th>
+              </tr>
+            </thead>
+            <tbody id="trade-result-body"></tbody>
+          </table>
+        </div>
+        <p class="result-footnote">成交后市值、仓位和偏差会随实际成交价动态更新。应用时，买入成本按实际成交价加权计算（不含估算手续费）；旧持仓成本缺失时继续留空；卖出保留原成本，清仓会清空成本。</p>
+      </div>
+      <div class="execution-review-bar">
+        <p id="execution-review-status" role="status" aria-live="polite">请核对实际成交记录。</p>
+        <button class="button button-primary apply-execution-button" id="apply-execution-button" type="button" disabled>核对完成后写回持仓</button>
+        <span class="field-hint">只更新本工具记录，不会向券商下单。实际成交不符时，请勿按计划写回。</span>
+      </div>
+    </section>
+
+    <footer class="footer">本工具只提供数学计算，不构成投资建议。请根据实际成交价格和券商费率复核。</footer>
+  </main>
+
+  <template id="holding-row-template">
+    <tr>
+      <td><input class="table-input asset-name" type="text" maxlength="30" aria-label="品种名称，由 ETF 代码自动更新" placeholder="更新后自动填写" readonly></td>
+      <td><input class="table-input asset-code" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" aria-label="ETF 代码"></td>
+      <td><input class="table-input current-shares" type="number" min="0" step="1" inputmode="numeric" aria-label="当前股数"></td>
+      <td>
+        <div class="price-cell">
+          <input class="table-input target-percent" type="number" min="0" max="100" step="0.1" inputmode="decimal" aria-label="目标仓位百分比">
+          <span class="price-unit">%</span>
+        </div>
+      </td>
+      <td>
+        <div class="price-pair">
+          <div class="compact-field">
+            <label>成本</label>
+            <input class="table-input cost-price" type="number" min="0" step="0.001" inputmode="decimal" aria-label="持仓成本价">
+          </div>
+          <div class="compact-field">
+            <label>现价</label>
+            <input class="table-input current-price" type="number" min="0.001" step="0.001" inputmode="decimal" aria-label="当前价格">
+          </div>
+        </div>
+        <div class="price-meta">
+          <span class="source-label">手动输入</span>
+          <span class="source-time">未获取行情</span>
+        </div>
+      </td>
+      <td>
+        <div class="holding-stat profit-loss" aria-label="累计盈亏">
+          <strong class="holding-stat-primary">--</strong>
+          <span class="holding-stat-secondary">--</span>
+        </div>
+      </td>
+      <td>
+        <div class="holding-stat daily-profit-loss" aria-label="当日盈亏">
+          <strong class="holding-stat-primary">--</strong>
+          <span class="holding-stat-secondary">获取行情后计算</span>
+        </div>
+      </td>
+      <td>
+        <div class="holding-stat current-position" aria-label="当前仓位">
+          <strong class="holding-stat-primary">--</strong>
+          <span class="holding-stat-secondary">--</span>
+        </div>
+      </td>
+      <td class="col-action">
+        <div class="row-actions">
+          <button class="clear-position" type="button">清仓</button>
+          <button class="icon-button remove-row" type="button" aria-label="删除该品种" title="删除该品种">
+            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 7h12m-9 0V5a1 1 0 011-1h4a1 1 0 011 1v2m-8 0 1 13h8l1-13M10 11v5m4-5v5" />
+            </svg>
+          </button>
+        </div>
+      </td>
+    </tr>
+  </template>
+
+  <script>
+    "use strict";
+
+    const DATA_SCHEMA_VERSION = 3;
+    const HANDLE_DB_NAME = "portfolio-rebalancer-file-access";
+    const HANDLE_STORE_NAME = "file-handles";
+    const LAST_HANDLE_KEY = "last-data-file";
+    const MAX_ASSETS = 8;
+    const MAX_SEARCH_NODES = 2000000;
+    const MAX_CANDIDATES_PER_ASSET = 5000;
+    const MAX_TOTAL_CANDIDATES = 20000;
+    const EPSILON = 0.005;
+
+    const EMPTY_STATE = {
+      schemaVersion: DATA_SCHEMA_VERSION,
+      cash: 0,
+      reservedCash: 0,
+      feeRate: 0,
+      minimumFee: 0,
+      lotSize: 100,
+      savedAt: "",
+      assets: [
+        { name: "", code: "", shares: 0, targetPercent: 0, cost: "", price: "", previousClose: "", source: "manual", quoteTime: "" }
+      ]
+    };
+
+    const elements = {
+      main: document.querySelector("#main-content"),
+      skipLink: document.querySelector("#skip-link"),
+      startupGate: document.querySelector("#startup-gate"),
+      startupTitle: document.querySelector("#startup-title"),
+      startupDescription: document.querySelector("#startup-description"),
+      startupContinue: document.querySelector("#startup-continue-button"),
+      startupContinueLabel: document.querySelector("#startup-continue-label"),
+      startupOpen: document.querySelector("#startup-open-button"),
+      startupNew: document.querySelector("#startup-new-button"),
+      startupMessage: document.querySelector("#startup-message"),
+      body: document.querySelector("#holdings-body"),
+      template: document.querySelector("#holding-row-template"),
+      cash: document.querySelector("#available-cash"),
+      reservedCash: document.querySelector("#reserved-cash"),
+      feeRate: document.querySelector("#fee-rate"),
+      minimumFee: document.querySelector("#minimum-fee"),
+      lotSize: document.querySelector("#lot-size"),
+      layerTotal: document.querySelector("#layer-total"),
+      targetTotalNote: document.querySelector("#target-total-note"),
+      targetTotalDetail: document.querySelector("#target-total-detail"),
+      addRow: document.querySelector("#add-row-button"),
+      fetch: document.querySelector("#fetch-button"),
+      fetchLabel: document.querySelector("#fetch-button-label"),
+      recalculate: document.querySelector("#recalculate-button"),
+      recalculateLabel: document.querySelector("#recalculate-button-label"),
+      calculate: document.querySelector("#calculate-button"),
+      calculateLabel: document.querySelector("#calculate-button-label"),
+      openData: document.querySelector("#open-data-button"),
+      save: document.querySelector("#save-button"),
+      saveAs: document.querySelector("#save-as-button"),
+      saveMeta: document.querySelector("#save-meta"),
+      reset: document.querySelector("#reset-button"),
+      status: document.querySelector("#status-region"),
+      errorSummary: document.querySelector("#error-summary"),
+      errorList: document.querySelector("#error-list"),
+      results: document.querySelector("#results-card"),
+      resultDescription: document.querySelector("#result-description"),
+      tradeBody: document.querySelector("#trade-result-body"),
+      orderGroups: document.querySelector("#order-groups"),
+      executionReviewStatus: document.querySelector("#execution-review-status"),
+      applyExecution: document.querySelector("#apply-execution-button"),
+      copy: document.querySelector("#copy-button"),
+      print: document.querySelector("#print-button"),
+      metricTotalAssets: document.querySelector("#metric-total-assets"),
+      metricInvestedRatio: document.querySelector("#metric-invested-ratio"),
+      metricCashAfter: document.querySelector("#metric-cash-after"),
+      metricCashAfterHint: document.querySelector("#metric-cash-after-hint"),
+      metricFees: document.querySelector("#metric-fees"),
+      metricTradeCount: document.querySelector("#metric-trade-count")
+    };
+
+    let lastResult = null;
+    let applyingNetworkPrices = false;
+    let lastSavedAt = "";
+    let activeFileHandle = null;
+    let activeFileName = "";
+    let rememberedFileHandle = null;
+    let hasUnsavedChanges = false;
+    let changeRevision = 0;
+
+    function cloneEmptyState() {
+      return JSON.parse(JSON.stringify(EMPTY_STATE));
+    }
+
+    function openHandleDatabase() {
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        const request = indexedDB.open(HANDLE_DB_NAME, 1);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(HANDLE_STORE_NAME)) {
+            request.result.createObjectStore(HANDLE_STORE_NAME);
+          }
+        };
+        request.onsuccess = () => {
+          if (settled) {
+            request.result.close();
+            return;
+          }
+          settled = true;
+          request.result.onversionchange = () => request.result.close();
+          resolve(request.result);
+        };
+        request.onerror = () => {
+          if (settled) return;
+          settled = true;
+          reject(request.error || new Error("无法打开浏览器文件句柄存储。"));
+        };
+        request.onblocked = () => {
+          if (settled) return;
+          settled = true;
+          reject(new Error("浏览器文件句柄存储正在被其他页面占用。"));
+        };
+      });
+    }
+
+    function isUsableFileHandle(handle) {
+      return Boolean(handle)
+        && handle.kind === "file"
+        && typeof handle.getFile === "function";
+    }
+
+    async function readRememberedFileHandle() {
+      const database = await openHandleDatabase();
+      try {
+        return await new Promise((resolve, reject) => {
+          const request = database.transaction(HANDLE_STORE_NAME, "readonly")
+            .objectStore(HANDLE_STORE_NAME)
+            .get(LAST_HANDLE_KEY);
+          request.onsuccess = () => resolve(request.result || null);
+          request.onerror = () => reject(request.error || new Error("无法读取上次选择的文件。"));
+        });
+      } finally {
+        database.close();
+      }
+    }
+
+    async function rememberDataFileHandle(handle) {
+      if (!isUsableFileHandle(handle)) throw new Error("默认文件句柄格式不正确。");
+      const database = await openHandleDatabase();
+      try {
+        await new Promise((resolve, reject) => {
+          const transaction = database.transaction(HANDLE_STORE_NAME, "readwrite");
+          transaction.objectStore(HANDLE_STORE_NAME).put(handle, LAST_HANDLE_KEY);
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error || new Error("无法记住当前数据文件。"));
+          transaction.onabort = () => reject(transaction.error || new Error("记住当前数据文件的操作已中止。"));
+        });
+        rememberedFileHandle = handle;
+      } finally {
+        database.close();
+      }
+    }
+
+    async function forgetRememberedFileHandle() {
+      const database = await openHandleDatabase();
+      try {
+        await new Promise((resolve, reject) => {
+          const transaction = database.transaction(HANDLE_STORE_NAME, "readwrite");
+          transaction.objectStore(HANDLE_STORE_NAME).delete(LAST_HANDLE_KEY);
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error || new Error("无法清除上次选择的文件。"));
+          transaction.onabort = () => reject(transaction.error || new Error("清除上次文件的操作已中止。"));
+        });
+        rememberedFileHandle = null;
+      } finally {
+        database.close();
+      }
+    }
+
+    async function hasHandlePermission(handle, mode = "read", requestAccess = false) {
+      if (!isUsableFileHandle(handle)) return false;
+      if (typeof handle?.queryPermission !== "function") return true;
+      const options = { mode };
+      if (await handle.queryPermission(options) === "granted") return true;
+      if (!requestAccess || typeof handle.requestPermission !== "function") return false;
+      return await handle.requestPermission(options) === "granted";
+    }
+
+    function showStartupMessage(message) {
+      elements.startupMessage.textContent = message;
+    }
+
+    function getStartupPrimaryButton() {
+      return elements.startupContinue.hidden ? elements.startupOpen : elements.startupContinue;
+    }
+
+    function showStartupChoices(handle = null, message = "") {
+      rememberedFileHandle = handle;
+      elements.startupContinue.hidden = !handle;
+      elements.startupContinueLabel.textContent = handle
+        ? `继续打开 ${handle.name || "上次文件"}`
+        : "继续打开上次文件";
+      elements.startupContinue.title = handle ? `继续打开 ${handle.name || "上次文件"}` : "";
+      elements.startupOpen.classList.toggle("button-primary", !handle);
+      elements.startupOpen.classList.toggle("button-soft", Boolean(handle));
+      elements.startupTitle.textContent = handle ? "继续使用上次的数据" : "先打开调仓数据";
+      elements.startupDescription.textContent = handle
+        ? "浏览器记得上次的 JSON 文件。继续授权即可打开，或选择其他文件。"
+        : "请选择之前保存的 JSON 数据文件。首次使用时，可以新建一个空白组合。";
+      showStartupMessage(message);
+      setFileButtonsDisabled(false);
+      requestAnimationFrame(() => getStartupPrimaryButton().focus());
+    }
+
+    function dismissStartupGate() {
+      if (elements.startupGate.hidden) return;
+      elements.startupGate.hidden = true;
+      elements.main.removeAttribute("inert");
+      elements.skipLink.removeAttribute("inert");
+      document.body.classList.remove("startup-open");
+      showStartupMessage("");
+    }
+
+    function trapStartupFocus(event) {
+      if (event.key !== "Tab" || elements.startupGate.hidden) return;
+      const focusableButtons = [elements.startupContinue, elements.startupOpen, elements.startupNew]
+        .filter((button) => !button.hidden && !button.disabled);
+      if (focusableButtons.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusableButtons[0];
+      const last = focusableButtons[focusableButtons.length - 1];
+      const activeIsFocusable = focusableButtons.includes(document.activeElement);
+      if (event.shiftKey && (document.activeElement === first || !activeIsFocusable)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !activeIsFocusable)) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    async function startNewDocument() {
+      const startRevision = changeRevision;
+      const previousRememberedHandle = rememberedFileHandle;
+      const mustForgetRememberedHandle = Boolean(rememberedFileHandle);
+      setFileButtonsDisabled(true);
+      try {
+        try {
+          await forgetRememberedFileHandle();
+        } catch (error) {
+          if (mustForgetRememberedHandle) {
+            const message = `无法清除上次文件：${error.message}`;
+            showStatus(message, "error");
+            if (!elements.startupGate.hidden) showStartupMessage(message);
+            return false;
+          }
+        }
+
+        if (changeRevision !== startRevision
+          && !window.confirm("清除默认文件期间页面又产生了新的修改，确定放弃这些修改并新建空白组合吗？")) {
+          let restoreError = null;
+          if (previousRememberedHandle) {
+            try {
+              await rememberDataFileHandle(previousRememberedHandle);
+            } catch (error) {
+              restoreError = error;
+            }
+          }
+          showStatus(
+            restoreError
+              ? `已保留当前修改，但无法恢复上次默认文件：${restoreError.message}`
+              : "已取消新建空白组合，当前修改和默认文件均已保留。",
+            restoreError ? "error" : "info"
+          );
+          return false;
+        }
+
+        // 新建空白组合必须解除旧文件绑定，避免后续“保存数据”覆盖此前打开的 JSON。
+        changeRevision += 1;
+        activeFileHandle = null;
+        activeFileName = "";
+        lastSavedAt = "";
+        hasUnsavedChanges = false;
+        initialize(cloneEmptyState());
+        elements.results.hidden = true;
+        lastResult = null;
+        clearValidation();
+        updateSaveMeta();
+        dismissStartupGate();
+        showStatus("已新建空白组合，填写后请保存为 JSON 数据文件。", "info");
+        requestAnimationFrame(() => elements.body.querySelector(".asset-code")?.focus());
+        return true;
+      } finally {
+        setFileButtonsDisabled(false);
+      }
+    }
+
+    function normalizeDataFileState(state) {
+      if (!state || typeof state !== "object" || state.schemaVersion !== DATA_SCHEMA_VERSION) {
+        throw new Error(`数据文件版本不正确，需要版本 ${DATA_SCHEMA_VERSION}。`);
+      }
+      if (!Array.isArray(state.assets) || state.assets.length < 1 || state.assets.length > MAX_ASSETS) {
+        throw new Error(`数据文件必须包含 1 至 ${MAX_ASSETS} 个品种。`);
+      }
+
+      const normalizeText = (value, label, maxLength) => {
+        if (typeof value !== "string" || value.length > maxLength) {
+          throw new Error(`${label}格式不正确。`);
+        }
+        return value;
+      };
+      const normalizeNumber = (value, label, options = {}) => {
+        const isNumber = typeof value === "number";
+        const isNumericString = typeof value === "string"
+          && value !== ""
+          && value.trim() === value
+          && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value);
+        if (!isNumber && !isNumericString) {
+          throw new Error(`${label}格式不正确。`);
+        }
+        const number = Number(value);
+        const min = options.min ?? 0;
+        const max = options.max ?? Infinity;
+        if (!Number.isFinite(number) || number < min || number > max || (options.integer && !Number.isInteger(number))) {
+          throw new Error(`${label}格式不正确。`);
+        }
+        // 统一成浏览器 number 输入框可接受的规范格式，避免合法 JSON 值载入后被静默清空。
+        return String(number);
+      };
+      const normalizeOptionalPrice = (value, label, min) => {
+        if (value === "") return "";
+        return normalizeNumber(value, label, { min });
+      };
+
+      const lotSize = normalizeNumber(state.lotSize, "每手股数", { min: 1, integer: true });
+      const assets = state.assets.map((asset, index) => {
+        if (!asset || typeof asset !== "object") throw new Error(`第 ${index + 1} 个品种格式不正确。`);
+        if (asset.source !== "manual" && asset.source !== "network") {
+          throw new Error(`第 ${index + 1} 个品种的行情来源格式不正确。`);
+        }
+        if (asset.source === "network" && (asset.price === "" || asset.price == null)) {
+          throw new Error(`第 ${index + 1} 个品种缺少网络行情现价。`);
+        }
+        const source = asset.source;
+        return {
+          name: normalizeText(asset.name, `第 ${index + 1} 个品种的名称`, 30),
+          code: normalizeText(asset.code, `第 ${index + 1} 个品种的代码`, 6),
+          shares: normalizeNumber(asset.shares, `第 ${index + 1} 个品种的当前股数`, { min: 0, integer: true }),
+          targetPercent: normalizeNumber(asset.targetPercent, `第 ${index + 1} 个品种的目标仓位`, { min: 0, max: 100 }),
+          cost: normalizeOptionalPrice(asset.cost, `第 ${index + 1} 个品种的成本`, 0),
+          price: normalizeOptionalPrice(asset.price, `第 ${index + 1} 个品种的现价`, 0.001),
+          previousClose: source === "network"
+            ? normalizeOptionalPrice(asset.previousClose, `第 ${index + 1} 个品种的昨收`, 0.001)
+            : "",
+          source,
+          quoteTime: source === "network"
+            ? normalizeText(asset.quoteTime, `第 ${index + 1} 个品种的行情时间`, 80)
+            : ""
+        };
+      });
+
+      if (typeof state.savedAt !== "string" || (state.savedAt && Number.isNaN(new Date(state.savedAt).getTime()))) {
+        throw new Error("保存时间格式不正确。");
+      }
+
+      return {
+        schemaVersion: DATA_SCHEMA_VERSION,
+        cash: normalizeNumber(state.cash, "当前可用现金", { min: 0 }),
+        reservedCash: normalizeNumber(state.reservedCash, "预留金额", { min: 0 }),
+        feeRate: normalizeNumber(state.feeRate, "手续费率", { min: 0 }),
+        minimumFee: normalizeNumber(state.minimumFee, "单笔最低手续费", { min: 0 }),
+        lotSize,
+        savedAt: state.savedAt,
+        assets
+      };
+    }
+
+    function ensureFileAccessSupported() {
+      if ("showOpenFilePicker" in window && "showSaveFilePicker" in window) return true;
+      const message = "当前浏览器不支持选择本地数据文件，请使用最新版 Chrome 或 Edge 打开此 HTML。";
+      showStatus(message, "error");
+      if (!elements.startupGate.hidden) showStartupMessage(message);
+      return false;
+    }
+
+    function setFileButtonsDisabled(disabled) {
+      if (disabled && !elements.startupGate.hidden && elements.startupGate.contains(document.activeElement)) {
+        // 聚焦容器后再禁用按钮，避免 Chrome 将焦点移到 modal 外的 BODY。
+        elements.startupGate.focus();
+      }
+      elements.startupContinue.disabled = disabled;
+      elements.startupOpen.disabled = disabled;
+      elements.startupNew.disabled = disabled;
+      elements.openData.disabled = disabled;
+      elements.save.disabled = disabled;
+      elements.saveAs.disabled = disabled;
+      elements.reset.disabled = disabled;
+      if (!disabled && !elements.startupGate.hidden
+        && (document.activeElement === elements.startupGate || document.activeElement === document.body)) {
+        getStartupPrimaryButton().focus();
+      }
+    }
+
+    function markUnsaved() {
+      changeRevision += 1;
+      hasUnsavedChanges = true;
+      updateSaveMeta();
+    }
+
+    function readRawState() {
+      return {
+        schemaVersion: DATA_SCHEMA_VERSION,
+        cash: elements.cash.value,
+        reservedCash: elements.reservedCash.value,
+        feeRate: elements.feeRate.value,
+        minimumFee: elements.minimumFee.value,
+        lotSize: elements.lotSize.value,
+        savedAt: lastSavedAt,
+        assets: [...elements.body.querySelectorAll("tr")].map((row) => ({
+          name: row.querySelector(".asset-name").value.trim(),
+          code: row.querySelector(".asset-code").value.trim(),
+          shares: row.querySelector(".current-shares").value,
+          targetPercent: row.querySelector(".target-percent").value,
+          cost: row.querySelector(".cost-price").value,
+          price: row.querySelector(".current-price").value,
+          previousClose: row.dataset.previousClose || "",
+          source: row.dataset.source || "manual",
+          quoteTime: row.dataset.quoteTime || ""
+        }))
+      };
+    }
+
+    function formatSavedTime(isoTime) {
+      const date = new Date(isoTime);
+      if (Number.isNaN(date.getTime())) return "";
+      return new Intl.DateTimeFormat("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).format(date);
+    }
+
+    function updateSaveMeta() {
+      const formatted = formatSavedTime(lastSavedAt);
+      let metaText;
+      if (hasUnsavedChanges) {
+        metaText = activeFileName
+          ? `${activeFileName} · 有未保存修改`
+          : "有未保存修改 · 尚未选择数据文件";
+      } else if (activeFileName) {
+        metaText = formatted
+          ? `${activeFileName} · 已保存 ${formatted}`
+          : activeFileName;
+      } else {
+        metaText = "尚未选择数据文件";
+      }
+      elements.saveMeta.textContent = metaText;
+      elements.saveMeta.title = metaText;
+    }
+
+    async function loadDataFileHandle(handle, options = {}) {
+      if (!isUsableFileHandle(handle)) throw new Error("文件句柄格式不正确。");
+      const openRevision = options.openRevision ?? changeRevision;
+      const file = await handle.getFile();
+      const parsed = JSON.parse(await file.text());
+      const state = normalizeDataFileState(parsed);
+
+      if (changeRevision !== openRevision
+        && !window.confirm("打开数据文件期间页面又产生了新的修改，确定放弃这些修改并载入所选文件吗？")) {
+        showStatus("已取消打开数据文件，当前页面数据未改变。", "info");
+        return false;
+      }
+
+      changeRevision += 1;
+      initialize(state);
+      activeFileHandle = handle;
+      activeFileName = file.name;
+      lastSavedAt = state.savedAt;
+      hasUnsavedChanges = false;
+      elements.results.hidden = true;
+      lastResult = null;
+      clearValidation();
+      updateSaveMeta();
+
+      let rememberError = null;
+      if (options.remember !== false) {
+        try {
+          await rememberDataFileHandle(handle);
+        } catch (error) {
+          rememberError = error;
+        }
+      } else {
+        rememberedFileHandle = handle;
+      }
+
+      dismissStartupGate();
+      const action = options.automatic ? "已自动打开上次的数据" : "已打开";
+      showStatus(
+        rememberError
+          ? `${action} ${activeFileName}；但浏览器未能记住该文件：${rememberError.message}`
+          : `${action} ${activeFileName}。`,
+        rememberError ? "error" : "success"
+      );
+      requestAnimationFrame(() => elements.cash.focus());
+      return true;
+    }
+
+    async function showRememberedHandleFailure(handle, error) {
+      if (!isUsableFileHandle(handle) || error?.name === "NotFoundError") {
+        try {
+          await forgetRememberedFileHandle();
+        } catch {
+          rememberedFileHandle = null;
+        }
+        showStartupChoices(
+          null,
+          error?.name === "NotFoundError"
+            ? "上次选择的 JSON 文件已不存在，请重新选择文件。"
+            : "浏览器中记录的默认文件已失效，请重新选择 JSON 文件。"
+        );
+        return;
+      }
+      showStartupChoices(handle, `无法打开上次的 JSON 文件：${error.message}`);
+    }
+
+    async function restoreRememberedDataFile() {
+      setFileButtonsDisabled(true);
+      elements.startupGate.focus();
+      showStartupMessage("正在检查上次选择的 JSON 文件……");
+      try {
+        const handle = await readRememberedFileHandle();
+        if (!handle) {
+          showStartupChoices();
+          return false;
+        }
+        if (!isUsableFileHandle(handle)) {
+          await forgetRememberedFileHandle();
+          showStartupChoices(null, "浏览器中记录的默认文件已失效，请重新选择 JSON 文件。");
+          return false;
+        }
+        rememberedFileHandle = handle;
+        if (!await hasHandlePermission(handle, "read", false)) {
+          showStartupChoices(handle, "需要重新授权上次的 JSON 文件，无需再次选择文件。");
+          return false;
+        }
+        return await loadDataFileHandle(handle, { remember: false, automatic: true });
+      } catch (error) {
+        await showRememberedHandleFailure(rememberedFileHandle, error);
+        return false;
+      } finally {
+        setFileButtonsDisabled(false);
+      }
+    }
+
+    async function continueRememberedDataFile() {
+      const handle = rememberedFileHandle;
+      if (!handle) {
+        showStartupChoices();
+        return false;
+      }
+
+      setFileButtonsDisabled(true);
+      showStartupMessage(`正在授权并读取 ${handle.name || "上次文件"}……`);
+      try {
+        if (!await hasHandlePermission(handle, "read", true)) {
+          showStartupChoices(handle, "未获得文件访问权限，请重试或选择其他 JSON 文件。");
+          return false;
+        }
+        return await loadDataFileHandle(handle, { remember: false });
+      } catch (error) {
+        await showRememberedHandleFailure(handle, error);
+        return false;
+      } finally {
+        setFileButtonsDisabled(false);
+      }
+    }
+
+    async function saveDataFile(saveAs = false) {
+      if (!ensureFileAccessSupported()) return false;
+      setFileButtonsDisabled(true);
+      try {
+        const savedRevision = changeRevision;
+        const savedAt = new Date().toISOString();
+        // 保存前使用与打开文件完全相同的校验，保证成功写出的文件可被当前版本重新打开。
+        const state = normalizeDataFileState({ ...readRawState(), savedAt });
+        let handle = saveAs ? null : activeFileHandle;
+        let selectedByPicker = false;
+        if (!handle) {
+          handle = await window.showSaveFilePicker({
+            suggestedName: activeFileName || "调仓数据.json",
+            types: [{ description: "调仓计算器数据", accept: { "application/json": [".json"] } }]
+          });
+          selectedByPicker = true;
+        }
+        if (!selectedByPicker && !await hasHandlePermission(handle, "readwrite", true)) {
+          throw new Error("未获得当前 JSON 文件的写入权限。");
+        }
+
+        const writable = await handle.createWritable();
+        try {
+          await writable.write(JSON.stringify(state, null, 2));
+          await writable.close();
+        } catch (error) {
+          try {
+            await writable.abort();
+          } catch {
+            // 原始写入异常更能说明失败原因，终止写入失败不覆盖它。
+          }
+          throw error;
+        }
+
+        activeFileHandle = handle;
+        activeFileName = handle.name || "调仓数据.json";
+        lastSavedAt = savedAt;
+        hasUnsavedChanges = changeRevision !== savedRevision;
+        updateSaveMeta();
+
+        let rememberError = null;
+        try {
+          await rememberDataFileHandle(handle);
+        } catch (error) {
+          rememberError = error;
+        }
+        const savedMessage = hasUnsavedChanges
+          ? `数据已保存到 ${activeFileName}，但保存期间产生了新的未保存修改。`
+          : `数据已保存到 ${activeFileName}。`;
+        showStatus(
+          rememberError
+            ? `${savedMessage} 浏览器未能将其设为下次默认文件：${rememberError.message}`
+            : savedMessage,
+          rememberError ? "error" : "success"
+        );
+        return true;
+      } catch (error) {
+        if (error?.name !== "AbortError") {
+          updateSaveMeta();
+          showStatus(`保存数据文件失败：${error.message}`, "error");
+        }
+        return false;
+      } finally {
+        setFileButtonsDisabled(false);
+      }
+    }
+
+    async function openDataFile() {
+      if (!ensureFileAccessSupported()) return false;
+      if (hasUnsavedChanges && !window.confirm("当前有未保存修改，确定打开其他数据文件并放弃这些修改吗？")) return false;
+      const openRevision = changeRevision;
+      setFileButtonsDisabled(true);
+      showStartupMessage("");
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          multiple: false,
+          types: [{ description: "调仓计算器数据", accept: { "application/json": [".json"] } }]
+        });
+        if (!elements.startupGate.hidden) elements.startupGate.focus();
+        return await loadDataFileHandle(handle, { openRevision, remember: true });
+      } catch (error) {
+        if (error?.name !== "AbortError") {
+          const message = `打开数据文件失败：${error.message}；当前页面数据未改变。`;
+          showStatus(message, "error");
+          if (!elements.startupGate.hidden) showStartupMessage(message);
+        }
+        return false;
+      } finally {
+        setFileButtonsDisabled(false);
+      }
+    }
+
+    async function saveCurrentData() {
+      await saveDataFile(false);
+    }
+
+    function createRow(asset = {}) {
+      const fragment = elements.template.content.cloneNode(true);
+      const row = fragment.querySelector("tr");
+      row.querySelector(".asset-name").value = asset.name ?? "";
+      row.querySelector(".asset-code").value = asset.code ?? "";
+      row.querySelector(".current-shares").value = asset.shares ?? 0;
+      row.querySelector(".target-percent").value = asset.targetPercent ?? 0;
+      row.querySelector(".cost-price").value = asset.cost === "" || asset.cost == null ? "" : formatPriceInput(asset.cost);
+      row.querySelector(".current-price").value = asset.price === "" || asset.price == null ? "" : formatPriceInput(asset.price);
+      row.dataset.previousClose = asset.previousClose ?? "";
+      row.dataset.source = asset.source || "manual";
+      row.dataset.quoteTime = asset.quoteTime || "";
+      updateSourceMeta(row);
+      elements.body.appendChild(fragment);
+      updateRowControls();
+      updateTargetTotal();
+      refreshHoldingMetrics();
+    }
+
+    function updateSourceMeta(row, isError = false) {
+      const sourceLabel = row.querySelector(".source-label");
+      const sourceTime = row.querySelector(".source-time");
+      sourceLabel.className = "source-label";
+
+      if (isError) {
+        sourceLabel.textContent = "获取失败";
+        sourceLabel.classList.add("error");
+        sourceTime.textContent = "请手动核对价格";
+        return;
+      }
+
+      if (row.dataset.source === "network") {
+        sourceLabel.textContent = "网络行情";
+        sourceLabel.classList.add("network");
+        sourceTime.textContent = row.dataset.quoteTime || "时间未知";
+      } else {
+        sourceLabel.textContent = "手动输入";
+        sourceTime.textContent = row.dataset.quoteTime ? `原行情 ${row.dataset.quoteTime}` : "未获取行情";
+      }
+    }
+
+    function updateRowControls() {
+      const rows = [...elements.body.querySelectorAll("tr")];
+      rows.forEach((row) => {
+        const shares = Math.max(0, Number(row.querySelector(".current-shares").value) || 0);
+        const targetPercent = Math.max(0, Number(row.querySelector(".target-percent").value) || 0);
+        const name = row.querySelector(".asset-name").value.trim() || "该品种";
+        const clearButton = row.querySelector(".clear-position");
+        const removeButton = row.querySelector(".remove-row");
+
+        clearButton.hidden = shares <= 0;
+        clearButton.disabled = shares > 0 && targetPercent <= 0;
+        clearButton.textContent = targetPercent <= 0 ? "待清仓" : "清仓";
+        clearButton.setAttribute("aria-label", `${targetPercent <= 0 ? "已将" : "将"}${name}的目标仓位设为 0%`);
+
+        removeButton.hidden = shares > 0;
+        removeButton.disabled = rows.length <= 1 || shares > 0;
+      });
+      elements.addRow.disabled = rows.length >= MAX_ASSETS;
+    }
+
+    function updateTargetTotal() {
+      const total = [...elements.body.querySelectorAll(".target-percent")]
+        .reduce((sum, input) => sum + (Number(input.value) || 0), 0);
+      const remaining = 100 - total;
+      elements.layerTotal.textContent = `${formatNumber(total, 2)}%`;
+      elements.targetTotalNote.classList.toggle("over-limit", total > 100 + 1e-9);
+      if (total > 100 + 1e-9) {
+        elements.targetTotalDetail.textContent = ` · 超出 ${formatNumber(Math.abs(remaining), 2)}%`;
+      } else {
+        elements.targetTotalDetail.textContent = ` · 剩余 ${formatNumber(Math.max(0, remaining), 2)}% 作为现金`;
+      }
+    }
+
+    function updateProfitStat(container, amount, ratio, unavailableText = "--") {
+      const primary = container.querySelector(".holding-stat-primary");
+      const secondary = container.querySelector(".holding-stat-secondary");
+      container.classList.remove("gain", "loss");
+
+      if (!Number.isFinite(amount) || !Number.isFinite(ratio)) {
+        primary.textContent = "--";
+        secondary.textContent = unavailableText;
+        return;
+      }
+
+      if (amount > EPSILON) container.classList.add("gain");
+      if (amount < -EPSILON) container.classList.add("loss");
+      primary.textContent = formatSignedCurrency(amount);
+      secondary.textContent = formatSignedPercent(ratio);
+    }
+
+    function refreshHoldingMetrics() {
+      const rows = [...elements.body.querySelectorAll("tr")];
+      const cash = Math.max(0, Number(elements.cash.value) || 0);
+      const currentMarketValue = rows.reduce((sum, row) => {
+        const shares = Math.max(0, Number(row.querySelector(".current-shares").value) || 0);
+        const price = Math.max(0, Number(row.querySelector(".current-price").value) || 0);
+        return sum + shares * price;
+      }, 0);
+      const totalAssets = currentMarketValue + cash;
+
+      rows.forEach((row) => {
+        const shares = Math.max(0, Number(row.querySelector(".current-shares").value) || 0);
+        const cost = Number(row.querySelector(".cost-price").value);
+        const price = Number(row.querySelector(".current-price").value);
+        const previousClose = Number(row.dataset.previousClose);
+        const marketValue = shares * (Number.isFinite(price) ? price : 0);
+
+        const profitAmount = shares > 0 && cost > 0 && price > 0
+          ? (price - cost) * shares
+          : NaN;
+        const profitRatio = cost > 0 && price > 0
+          ? (price - cost) / cost
+          : NaN;
+        updateProfitStat(row.querySelector(".profit-loss"), profitAmount, profitRatio, shares > 0 ? "请输入成本" : "暂无持仓");
+
+        const dailyAmount = shares > 0 && previousClose > 0 && price > 0
+          ? (price - previousClose) * shares
+          : NaN;
+        const dailyRatio = previousClose > 0 && price > 0
+          ? (price - previousClose) / previousClose
+          : NaN;
+        updateProfitStat(row.querySelector(".daily-profit-loss"), dailyAmount, dailyRatio, shares > 0 ? "获取行情后计算" : "暂无持仓");
+
+        const position = row.querySelector(".current-position");
+        position.classList.remove("gain", "loss");
+        position.querySelector(".holding-stat-primary").textContent = totalAssets > 0
+          ? formatPercent(marketValue / totalAssets)
+          : "--";
+        position.querySelector(".holding-stat-secondary").textContent = formatCurrency(marketValue);
+      });
+    }
+
+    function clearValidation() {
+      document.querySelectorAll('[aria-invalid="true"]').forEach((input) => input.removeAttribute("aria-invalid"));
+      elements.errorSummary.classList.remove("visible");
+      elements.errorList.innerHTML = "";
+    }
+
+    function showErrors(errors) {
+      elements.errorList.innerHTML = errors.map((error) => `<li>${escapeHtml(error.message)}</li>`).join("");
+      errors.forEach((error) => error.element?.setAttribute("aria-invalid", "true"));
+      elements.errorSummary.classList.add("visible");
+      elements.errorSummary.focus();
+    }
+
+    function showStatus(message, type = "info") {
+      elements.status.textContent = message;
+      elements.status.className = `status-region visible ${type}`;
+    }
+
+    function hideStatus() {
+      elements.status.className = "status-region";
+      elements.status.textContent = "";
+    }
+
+    function invalidateResult() {
+      lastResult = null;
+      elements.results.hidden = true;
+    }
+
+    function parseInputNumber(input, label, errors, options = {}) {
+      const value = Number(input.value);
+      const min = options.min ?? -Infinity;
+      const integer = options.integer ?? false;
+
+      if (!Number.isFinite(value) || value < min || (integer && !Number.isInteger(value))) {
+        const requirement = integer ? `大于等于 ${min} 的整数` : `大于等于 ${min} 的数字`;
+        errors.push({ element: input, message: `${label}必须是${requirement}。` });
+        return 0;
+      }
+      return value;
+    }
+
+    function parseOptionalNumber(input, label, errors, options = {}) {
+      if (input.value.trim() === "") return null;
+      return parseInputNumber(input, label, errors, options);
+    }
+
+    // 仅吸收 IEEE-754 加法顺序造成的机器误差，不作为可透支的业务金额容差。
+    function fundingTolerance(...values) {
+      const scale = Math.max(1, ...values.map((value) => Math.abs(Number(value) || 0)));
+      return Number.EPSILON * scale * 32;
+    }
+
+    function collectValidatedInput() {
+      clearValidation();
+      const errors = [];
+      const cash = parseInputNumber(elements.cash, "当前可用现金", errors, { min: 0 });
+      const reservedCash = parseInputNumber(elements.reservedCash, "预留金额", errors, { min: 0 });
+      const feeRatePercent = parseInputNumber(elements.feeRate, "手续费率", errors, { min: 0 });
+      const minimumFee = parseInputNumber(elements.minimumFee, "单笔最低手续费", errors, { min: 0 });
+      const lotSize = parseInputNumber(elements.lotSize, "每手股数", errors, { min: 1, integer: true });
+      const rows = [...elements.body.querySelectorAll("tr")];
+      const codeSet = new Set();
+
+      const assets = rows.map((row, index) => {
+        const rowNumber = index + 1;
+        const nameInput = row.querySelector(".asset-name");
+        const codeInput = row.querySelector(".asset-code");
+        const sharesInput = row.querySelector(".current-shares");
+        const targetPercentInput = row.querySelector(".target-percent");
+        const costInput = row.querySelector(".cost-price");
+        const priceInput = row.querySelector(".current-price");
+        const name = nameInput.value.trim();
+        const code = codeInput.value.trim();
+
+        if (!name) {
+          errors.push({ element: codeInput, message: `第 ${rowNumber} 行尚未获取品种名称，请先点击“更新名称和现价”。` });
+        }
+
+        if (!/^[15]\d{5}$/.test(code)) {
+          errors.push({ element: codeInput, message: `第 ${rowNumber} 行 ETF 代码必须是 1 或 5 开头的 6 位数字。` });
+        } else if (codeSet.has(code)) {
+          errors.push({ element: codeInput, message: `ETF 代码 ${code} 重复。` });
+        } else {
+          codeSet.add(code);
+        }
+
+        const currentShares = parseInputNumber(sharesInput, `第 ${rowNumber} 行当前股数`, errors, { min: 0, integer: true });
+        if (lotSize > 0 && currentShares % lotSize !== 0) {
+          errors.push({
+            element: sharesInput,
+            message: `第 ${rowNumber} 行当前股数必须是每手 ${lotSize} 股的整数倍。`
+          });
+        }
+
+        return {
+          row,
+          name: name || `品种 ${rowNumber}`,
+          code,
+          currentShares,
+          targetPercent: parseInputNumber(targetPercentInput, `第 ${rowNumber} 行目标仓位`, errors, { min: 0 }),
+          lotSize,
+          cost: parseOptionalNumber(costInput, `第 ${rowNumber} 行持仓成本价`, errors, { min: 0 }),
+          price: parseInputNumber(priceInput, `第 ${rowNumber} 行当前价格`, errors, { min: 0.001 }),
+          previousClose: Number(row.dataset.previousClose) || null,
+          source: row.dataset.source || "manual",
+          quoteTime: row.dataset.quoteTime || ""
+        };
+      });
+
+      const totalTargetPercent = assets.reduce((sum, asset) => sum + asset.targetPercent, 0);
+      const currentMarketValue = assets.reduce((sum, asset) => sum + asset.currentShares * asset.price, 0);
+      const totalAssets = currentMarketValue + cash;
+      if (!(totalTargetPercent > 0)) {
+        errors.push({ element: elements.body.querySelector(".target-percent"), message: "所有品种的目标仓位之和必须大于 0%。" });
+      }
+      if (totalTargetPercent > 100 + 1e-9) {
+        errors.push({ element: elements.body.querySelector(".target-percent"), message: `目标仓位合计不能超过 100%，当前为 ${formatNumber(totalTargetPercent, 2)}%。` });
+      }
+      if (reservedCash - totalAssets > fundingTolerance(reservedCash, totalAssets)) {
+        errors.push({
+          element: elements.reservedCash,
+          message: `预留金额不能超过当前总资产 ${formatCurrency(totalAssets)}。`
+        });
+      }
+
+      if (errors.length) {
+        showErrors(errors);
+        return null;
+      }
+
+      return {
+        cash,
+        reservedCash,
+        feeRate: feeRatePercent / 100,
+        minimumFee,
+        assets,
+        lotSize,
+        totalTargetPercent
+      };
+    }
+
+    function calculateTradeFee(tradeValue, feeRate, minimumFee) {
+      if (tradeValue <= 0) return 0;
+      return Math.max(tradeValue * feeRate, minimumFee);
+    }
+
+    function optimizePortfolio(input) {
+      const { assets, cash, reservedCash = 0, feeRate, minimumFee, totalTargetPercent } = input;
+      const currentMarketValue = assets.reduce((sum, asset) => sum + asset.currentShares * asset.price, 0);
+      const totalAssets = currentMarketValue + cash;
+
+      if (!(totalAssets > 0)) {
+        throw new Error("总资产必须大于 0。");
+      }
+
+      // 预留金额只限制调仓后的最低现金，不改变总资产及目标仓位的计算分母。
+      const rawSpendableAssets = totalAssets - reservedCash;
+      const moneyTolerance = fundingTolerance(totalAssets, reservedCash, rawSpendableAssets);
+      if (rawSpendableAssets < -moneyTolerance) {
+        throw new Error("预留金额不能超过当前总资产。");
+      }
+      const spendableAssets = Math.max(0, rawSpendableAssets);
+
+      const targetCashWeight = Math.max(0, 1 - totalTargetPercent / 100);
+      const targetTotalCost = totalAssets * (1 - targetCashWeight);
+      let plannedCandidateCount = 0;
+      const searchAssets = assets.map((asset, originalIndex) => {
+        const targetWeight = asset.targetPercent / 100;
+        const targetValue = totalAssets * targetWeight;
+        const idealLots = targetValue / (asset.price * asset.lotSize);
+        const maximumLots = asset.targetPercent <= 0
+          ? 0
+          : Math.floor((spendableAssets + moneyTolerance) / (asset.price * asset.lotSize));
+        const candidateCount = maximumLots + 1;
+        if (candidateCount > MAX_CANDIDATES_PER_ASSET) {
+          throw new Error(`品种 ${asset.name} 的可行整手数过多，请提高每手股数或调整输入价格。`);
+        }
+        plannedCandidateCount += candidateCount;
+        if (plannedCandidateCount > MAX_TOTAL_CANDIDATES) {
+          throw new Error("可行整手组合规模过大，请减少品种或提高每手股数。");
+        }
+        const candidates = [];
+
+        for (let lots = 0; lots <= maximumLots; lots += 1) {
+          const finalShares = lots * asset.lotSize;
+          const deltaShares = finalShares - asset.currentShares;
+          const tradeValue = Math.abs(deltaShares) * asset.price;
+          const fee = calculateTradeFee(tradeValue, feeRate, minimumFee);
+          const finalValue = finalShares * asset.price;
+          const cost = finalValue + fee;
+          if (cost - spendableAssets > moneyTolerance) continue;
+          const actualWeight = finalValue / totalAssets;
+          const deviation = actualWeight - targetWeight;
+          candidates.push({
+            lots,
+            finalShares,
+            deltaShares,
+            tradeValue,
+            fee,
+            finalValue,
+            cost,
+            actualWeight,
+            deviation,
+            assetError: deviation * deviation
+          });
+        }
+
+        if (!candidates.length) {
+          throw new Error(`预留金额和手续费设置使 ${asset.name} 没有可行的整手持仓方案。`);
+        }
+
+        candidates.sort((left, right) => {
+          const leftGuide = left.assetError + Math.pow((left.cost - targetValue) / totalAssets, 2);
+          const rightGuide = right.assetError + Math.pow((right.cost - targetValue) / totalAssets, 2);
+          return leftGuide - rightGuide || left.lots - right.lots;
+        });
+
+        return {
+          ...asset,
+          originalIndex,
+          targetWeight,
+          targetValue,
+          idealLots,
+          candidates,
+          minimumAssetError: Math.min(...candidates.map((candidate) => candidate.assetError)),
+          minimumCost: Math.min(...candidates.map((candidate) => candidate.cost)),
+          maximumCost: Math.max(...candidates.map((candidate) => candidate.cost))
+        };
+      });
+
+      searchAssets.sort((left, right) => right.maximumCost - left.maximumCost);
+      const suffixMinimumError = new Array(searchAssets.length + 1).fill(0);
+      const suffixMinimumCost = new Array(searchAssets.length + 1).fill(0);
+      const suffixMaximumCost = new Array(searchAssets.length + 1).fill(0);
+      for (let index = searchAssets.length - 1; index >= 0; index -= 1) {
+        suffixMinimumError[index] = suffixMinimumError[index + 1] + searchAssets[index].minimumAssetError;
+        suffixMinimumCost[index] = suffixMinimumCost[index + 1] + searchAssets[index].minimumCost;
+        suffixMaximumCost[index] = suffixMaximumCost[index + 1] + searchAssets[index].maximumCost;
+      }
+
+      let best = null;
+      const chosenCandidates = new Array(searchAssets.length);
+      let searchNodes = 0;
+
+      function search(index, assignedCost, assignedAssetError) {
+        searchNodes += 1;
+        if (searchNodes > MAX_SEARCH_NODES) {
+          throw new Error("整手组合搜索规模过大，请减少品种或提高每手股数。");
+        }
+
+        if (assignedCost + suffixMinimumCost[index] - spendableAssets > moneyTolerance) return;
+
+        const maximumRemainingCost = Math.min(
+          suffixMaximumCost[index],
+          Math.max(0, spendableAssets - assignedCost)
+        );
+        if (suffixMinimumCost[index] - maximumRemainingCost > moneyTolerance) return;
+
+        const desiredRemainingCost = targetTotalCost - assignedCost;
+        const closestRemainingCost = Math.min(
+          maximumRemainingCost,
+          Math.max(suffixMinimumCost[index], desiredRemainingCost)
+        );
+        const cashLowerBound = Math.pow(
+          (assignedCost + closestRemainingCost - targetTotalCost) / totalAssets,
+          2
+        );
+        const lowerBound = assignedAssetError + suffixMinimumError[index] + cashLowerBound;
+        // 同分方案仍需继续搜索，才能执行“误差相同则剩余现金更少”的既定排序规则。
+        if (best && lowerBound > best.score + 1e-12) return;
+
+        if (index === searchAssets.length) {
+          const rawCashAfter = totalAssets - assignedCost;
+          if (reservedCash - rawCashAfter > moneyTolerance) return;
+          const cashAfter = Math.max(reservedCash, rawCashAfter);
+          const cashWeight = cashAfter / totalAssets;
+          const score = assignedAssetError + Math.pow(cashWeight - targetCashWeight, 2);
+          const sortedItems = chosenCandidates.map((candidate, candidateIndex) => ({
+            ...searchAssets[candidateIndex],
+            ...candidate
+          }));
+          const items = sortedItems.sort((left, right) => left.originalIndex - right.originalIndex);
+          const finalMarketValue = items.reduce((sum, item) => sum + item.finalValue, 0);
+          const totalFees = items.reduce((sum, item) => sum + item.fee, 0);
+          const buys = items.reduce((sum, item) => sum + (item.deltaShares > 0 ? item.tradeValue : 0), 0);
+          const sells = items.reduce((sum, item) => sum + (item.deltaShares < 0 ? item.tradeValue : 0), 0);
+          const portfolio = {
+            items,
+            totalAssets,
+            currentMarketValue,
+            finalMarketValue,
+            buys,
+            sells,
+            totalFees,
+            cashAfter,
+            cashBefore: cash,
+            reservedCash,
+            feeRate,
+            minimumFee,
+            investedRatio: finalMarketValue / totalAssets,
+            score,
+            searchNodes
+          };
+          if (
+            !best ||
+            portfolio.score < best.score - 1e-12 ||
+            (Math.abs(portfolio.score - best.score) <= 1e-12 && portfolio.cashAfter < best.cashAfter)
+          ) {
+            best = portfolio;
+          }
+          return;
+        }
+
+        for (const candidate of searchAssets[index].candidates) {
+          const nextCost = assignedCost + candidate.cost;
+          if (nextCost - spendableAssets > moneyTolerance) continue;
+          chosenCandidates[index] = candidate;
+          search(index + 1, nextCost, assignedAssetError + candidate.assetError);
+        }
+      }
+
+      search(0, 0, 0);
+
+      if (!best) {
+        throw new Error("在当前现金、预留金额、价格和手续费设置下，没有找到满足条件的整手组合。");
+      }
+
+      return best;
+    }
+
+    function calculateAndRender(options = {}) {
+      hideStatus();
+      const input = collectValidatedInput();
+      if (!input) return false;
+
+      try {
+        lastResult = optimizePortfolio(input);
+        renderResult(lastResult);
+        if (!options.silent) {
+          showStatus("调仓方案已重新计算。", "success");
+        }
+        return true;
+      } catch (error) {
+        showErrors([{ element: null, message: error.message }]);
+        return false;
+      }
+    }
+
+    // 计划方向独立于实际成交输入；每次重算生成全新的空白核对记录。
+    function renderOrderChecklist(result) {
+      elements.orderGroups.innerHTML = [
+        { direction: "sell", label: "卖出 · 减少持仓", sign: -1 },
+        { direction: "buy", label: "买入 · 增加持仓", sign: 1 }
+      ].map((group) => {
+        const items = result.items.filter((item) => Math.sign(item.deltaShares) === group.sign);
+        const directionLabel = group.sign > 0 ? "买入" : "卖出";
+        return `<section class="order-group ${group.direction}" aria-label="${group.label}">
+          <h4>${group.label} · ${items.length} 笔</h4>
+          ${items.length ? items.map((item) => `
+            <article class="order-card" data-code="${escapeHtml(item.code)}">
+              <h5>${escapeHtml(item.name)}</h5>
+              <div class="order-code">${escapeHtml(item.code)}</div>
+              <div class="order-direction">${directionLabel} ${formatInteger(Math.abs(item.deltaShares))} 股</div>
+              <div class="order-flow">持仓 ${formatInteger(item.currentShares)} → ${formatInteger(item.finalShares)} 股 · 参考价 ${formatPriceInput(item.price)}</div>
+              <div class="order-verify">
+                <label>券商实际成交方向
+                  <select class="actual-direction" aria-label="${escapeHtml(item.name)}券商实际成交方向">
+                    <option value="">成交后选择</option>
+                    <option value="buy">买入</option>
+                    <option value="sell">卖出</option>
+                  </select>
+                </label>
+                <label>券商实际成交股数
+                  <input class="actual-quantity" type="number" min="1" step="1" placeholder="成交后填写" aria-label="${escapeHtml(item.name)}券商实际成交股数">
+                </label>
+              </div>
+              <p class="order-check-message" role="status" aria-live="polite">尚未核对成交记录</p>
+            </article>`).join("") : '<p class="order-empty">本次无需操作</p>'}
+        </section>`;
+      }).join("");
+      refreshExecutionChecks();
+    }
+
+    // 只允许计划与实际成交完全匹配后使用既有全量写回逻辑，防止错误方向被记成计划方向。
+    function refreshExecutionChecks() {
+      if (!lastResult) return false;
+      const trades = lastResult.items.filter((item) => item.deltaShares !== 0);
+      let matched = 0;
+      let mismatches = 0;
+      for (const item of trades) {
+        const card = elements.orderGroups.querySelector(`.order-card[data-code="${item.code}"]`);
+        if (!card) continue;
+        const directionInput = card.querySelector(".actual-direction");
+        const quantityInput = card.querySelector(".actual-quantity");
+        const expectedDirection = item.deltaShares > 0 ? "buy" : "sell";
+        const expectedLabel = item.deltaShares > 0 ? "买入" : "卖出";
+        const expectedQuantity = Math.abs(item.deltaShares);
+        const wrongDirection = directionInput.value !== "" && directionInput.value !== expectedDirection;
+        const wrongQuantity = quantityInput.value !== ""
+          && (!Number.isInteger(Number(quantityInput.value)) || Number(quantityInput.value) !== expectedQuantity);
+        const complete = directionInput.value === expectedDirection && quantityInput.value !== ""
+          && Number(quantityInput.value) === expectedQuantity;
+        const mismatch = wrongDirection || wrongQuantity;
+        if (complete) matched += 1;
+        if (mismatch) mismatches += 1;
+        directionInput.setAttribute("aria-invalid", String(wrongDirection));
+        quantityInput.setAttribute("aria-invalid", String(wrongQuantity));
+        card.classList.toggle("has-mismatch", mismatch);
+        const message = card.querySelector(".order-check-message");
+        message.classList.toggle("mismatch", mismatch);
+        message.textContent = mismatch
+          ? `成交与计划不符！计划为${expectedLabel} ${formatInteger(expectedQuantity)} 股，已阻止写回。请先核对券商成交记录。`
+          : complete ? "方向、股数与计划一致；请继续核对下表成交价。" : "尚未核对成交记录";
+      }
+      const ready = trades.length > 0 && matched === trades.length;
+      elements.applyExecution.disabled = !ready;
+      elements.applyExecution.textContent = ready ? "已核对，写回持仓" : "核对完成后写回持仓";
+      elements.executionReviewStatus.textContent = trades.length === 0
+        ? "本次没有买卖操作，无需写回。"
+        : mismatches > 0
+          ? `${mismatches} 笔成交与计划不符，不能写回持仓。请先核对实际成交，勿仅为通过检查而修改填写内容。`
+          : `已核对 ${matched} / ${trades.length} 笔方向与股数。${ready ? "请确认实际成交价后写回持仓。" : "请按券商成交记录逐笔填写。"}`;
+      return ready;
+    }
+
+    function renderResult(result) {
+      elements.metricTotalAssets.textContent = formatCurrency(result.totalAssets);
+      elements.metricInvestedRatio.textContent = formatPercent(result.investedRatio);
+      elements.metricCashAfter.textContent = formatCurrency(result.cashAfter);
+      elements.metricCashAfterHint.textContent = result.reservedCash > 0
+        ? `已至少预留 ${formatCurrency(result.reservedCash)}`
+        : "已扣除估算手续费";
+      elements.metricFees.textContent = formatCurrency(result.totalFees);
+      elements.metricTradeCount.textContent = String(result.items.filter((item) => item.deltaShares !== 0).length);
+
+      const quoteTimes = result.items
+        .filter((item) => item.source === "network" && item.quoteTime)
+        .map((item) => item.quoteTime)
+        .sort();
+      const quoteDescription = quoteTimes.length
+        ? `行情时间 ${quoteTimes[0]} 至 ${quoteTimes[quoteTimes.length - 1]}。`
+        : "当前价格来自手动输入。";
+      const reserveDescription = result.reservedCash > 0
+        ? `已按整手、资金和预留现金限制计算，最低预留 ${formatCurrency(result.reservedCash)}。`
+        : "已按整手和资金限制计算。";
+      elements.resultDescription.textContent = `${reserveDescription}${quoteDescription}`;
+
+      elements.tradeBody.innerHTML = result.items.map((item) => {
+        let operation = "保持不动";
+        let badgeClass = "hold";
+        if (item.deltaShares > 0) {
+          operation = `买入 ${formatInteger(item.deltaShares)} 股`;
+          badgeClass = "buy";
+        } else if (item.deltaShares < 0) {
+          operation = `卖出 ${formatInteger(Math.abs(item.deltaShares))} 股`;
+          badgeClass = "sell";
+        }
+        const deviationClass = item.deviation > 0.00005
+          ? "deviation-positive"
+          : item.deviation < -0.00005
+            ? "deviation-negative"
+            : "";
+        const deviationPrefix = item.deviation > 0 ? "+" : "";
+        const executionPrice = item.deltaShares === 0
+          ? '<span class="execution-not-required">无需填写</span>'
+          : `<input class="table-input execution-price-input" type="number" min="0.001" step="0.001" inputmode="decimal" value="${escapeHtml(formatPriceInput(item.price))}" aria-label="${escapeHtml(item.name)}实际成交价">`;
+        return `
+          <tr data-code="${escapeHtml(item.code)}">
+            <td><span class="result-asset-name">${escapeHtml(item.name)}</span><span class="result-code">${escapeHtml(item.code)}</span></td>
+            <td class="number share-flow">${formatInteger(item.currentShares)} → ${formatInteger(item.finalShares)}</td>
+            <td><span class="trade-badge ${badgeClass}">${operation}</span></td>
+            <td class="number execution-price-estimate">${formatPriceInput(item.price)}</td>
+            <td class="number">${executionPrice}</td>
+            <td class="number"><span class="execution-amount">${formatCurrency(item.tradeValue)}</span></td>
+            <td class="number"><span class="execution-fee">${formatCurrency(item.fee)}</span></td>
+            <td class="number">${formatPercent(item.targetWeight)}</td>
+            <td class="number"><span class="execution-allocation-value">${formatCurrency(item.finalValue)}</span><span class="execution-secondary execution-allocation-weight">${formatPercent(item.actualWeight)}</span></td>
+            <td class="number execution-deviation ${deviationClass}">${deviationPrefix}${formatPercent(item.deviation)}</td>
+          </tr>`;
+      }).join("");
+
+      renderOrderChecklist(result);
+      refreshExecutionPreview();
+
+      elements.results.hidden = false;
+      elements.results.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    }
+
+    // 根据实际成交价重算成交金额、估算手续费和成交后的可用现金。
+    function readExecutionDetails(collectErrors = false) {
+      if (!lastResult) return null;
+      const errors = [];
+      let cashAfter = lastResult.cashBefore;
+      let totalFees = 0;
+      let valid = true;
+
+      const details = lastResult.items.map((item) => {
+        const resultRow = elements.tradeBody.querySelector(`tr[data-code="${item.code}"]`);
+        const holdingRow = [...elements.body.querySelectorAll("tr")]
+          .find((row) => row.querySelector(".asset-code").value.trim() === item.code);
+        const costInput = holdingRow?.querySelector(".cost-price");
+        if (!holdingRow) {
+          valid = false;
+          if (collectErrors) {
+            errors.push({ element: null, message: `${item.name}已不在当前持仓列表中，请重新计算调仓方案。` });
+          }
+          return { item, resultRow, holdingRow: null, costInput: null, actualPrice: NaN, tradeValue: NaN, fee: NaN, finalValue: NaN, nextCost: NaN };
+        }
+        if (item.deltaShares === 0) {
+          return { item, resultRow, holdingRow, costInput, actualPrice: item.price, tradeValue: 0, fee: 0, finalValue: item.finalValue, nextCost: null };
+        }
+
+        const priceInput = resultRow?.querySelector(".execution-price-input");
+        const actualPrice = Number(priceInput?.value);
+        if (!(actualPrice > 0) || !Number.isFinite(actualPrice)) {
+          valid = false;
+          resultRow?.querySelector(".execution-amount")?.replaceChildren("--");
+          resultRow?.querySelector(".execution-fee")?.replaceChildren("--");
+          if (collectErrors) {
+            errors.push({ element: priceInput, message: `${item.name}的实际成交价必须是大于 0 的数字。` });
+          }
+          return { item, resultRow, priceInput, actualPrice: NaN, tradeValue: NaN, fee: NaN };
+        }
+
+        const tradeValue = Math.abs(item.deltaShares) * actualPrice;
+        const fee = calculateTradeFee(tradeValue, lastResult.feeRate, lastResult.minimumFee);
+        const finalValue = item.finalShares * actualPrice;
+        if (![tradeValue, fee, finalValue].every(Number.isFinite)) {
+          valid = false;
+          resultRow.querySelector(".execution-amount").textContent = "--";
+          resultRow.querySelector(".execution-fee").textContent = "--";
+          if (collectErrors) {
+            errors.push({ element: priceInput, message: `${item.name}的实际成交价过大，无法计算成交金额。` });
+          }
+          return { item, resultRow, priceInput, actualPrice, tradeValue: NaN, fee: NaN, finalValue: NaN };
+        }
+
+        const nextCash = cashAfter + (item.deltaShares > 0 ? -(tradeValue + fee) : tradeValue - fee);
+        if (!Number.isFinite(nextCash)) {
+          valid = false;
+          resultRow.querySelector(".execution-amount").textContent = "--";
+          resultRow.querySelector(".execution-fee").textContent = "--";
+          if (collectErrors) {
+            errors.push({ element: priceInput, message: `${item.name}的实际成交价导致现金金额超出可计算范围。` });
+          }
+          return { item, resultRow, priceInput, actualPrice, tradeValue: NaN, fee: NaN, finalValue: NaN };
+        }
+
+        let nextCost = null;
+        if (item.deltaShares > 0) {
+          const oldCost = Number(costInput?.value);
+          if (item.currentShares > 0 && !(oldCost > 0)) {
+            nextCost = null;
+          } else if (item.currentShares > 0) {
+            const existingCostValue = item.currentShares * oldCost;
+            nextCost = (existingCostValue + item.deltaShares * actualPrice) / item.finalShares;
+            if (![existingCostValue, nextCost].every(Number.isFinite)) {
+              valid = false;
+              resultRow.querySelector(".execution-amount").textContent = "--";
+              resultRow.querySelector(".execution-fee").textContent = "--";
+              if (collectErrors) {
+                errors.push({ element: costInput, message: `${item.name}的旧持仓成本过大，无法计算买入后的加权成本。` });
+              }
+              return { item, resultRow, holdingRow, costInput, priceInput, actualPrice, tradeValue, fee, finalValue, nextCost: NaN };
+            }
+          } else {
+            nextCost = actualPrice;
+          }
+        }
+
+        totalFees += fee;
+        cashAfter = nextCash;
+        resultRow.querySelector(".execution-amount").textContent = formatCurrency(tradeValue);
+        resultRow.querySelector(".execution-fee").textContent = formatCurrency(fee);
+        return { item, resultRow, holdingRow, costInput, priceInput, actualPrice, tradeValue, fee, finalValue, nextCost };
+      });
+
+      return { details, cashAfter, totalFees, valid, errors };
+    }
+
+    function refreshExecutionPreview() {
+      const preview = readExecutionDetails(false);
+      if (!preview) return;
+      if (!preview.valid) {
+        elements.metricCashAfter.textContent = "--";
+        elements.metricCashAfterHint.textContent = "请填写有效的实际成交价";
+        elements.metricFees.textContent = "--";
+        elements.metricInvestedRatio.textContent = "--";
+        elements.tradeBody.querySelectorAll(".execution-allocation-value, .execution-allocation-weight, .execution-deviation")
+          .forEach((element) => {
+            element.textContent = "--";
+            element.classList.remove("deviation-positive", "deviation-negative");
+          });
+        return;
+      }
+
+      const finalMarketValue = preview.details.reduce(
+        (sum, detail) => sum + detail.finalValue,
+        0
+      );
+      const finalTotalAssets = finalMarketValue + preview.cashAfter;
+      preview.details.forEach((detail) => {
+        const finalValue = detail.finalValue;
+        const actualWeight = finalTotalAssets > 0 ? finalValue / finalTotalAssets : 0;
+        const deviation = actualWeight - detail.item.targetWeight;
+        const deviationCell = detail.resultRow.querySelector(".execution-deviation");
+        detail.resultRow.querySelector(".execution-allocation-value").textContent = formatCurrency(finalValue);
+        detail.resultRow.querySelector(".execution-allocation-weight").textContent = formatPercent(actualWeight);
+        deviationCell.classList.remove("deviation-positive", "deviation-negative");
+        if (deviation > 0.00005) deviationCell.classList.add("deviation-positive");
+        if (deviation < -0.00005) deviationCell.classList.add("deviation-negative");
+        deviationCell.textContent = `${deviation > 0 ? "+" : ""}${formatPercent(deviation)}`;
+      });
+
+      elements.metricCashAfter.textContent = formatCurrency(preview.cashAfter);
+      elements.metricCashAfterHint.textContent = "按实际成交价并扣除估算手续费";
+      elements.metricFees.textContent = formatCurrency(preview.totalFees);
+      elements.metricInvestedRatio.textContent = finalTotalAssets > 0
+        ? formatPercent(finalMarketValue / finalTotalAssets)
+        : "--";
+    }
+
+    function applyExecutionResult() {
+      if (!lastResult) return;
+      if (!refreshExecutionChecks()) return;
+      clearValidation();
+      const execution = readExecutionDetails(true);
+      if (!execution?.valid) {
+        showErrors(execution?.errors || []);
+        return;
+      }
+
+      const tolerance = fundingTolerance(lastResult.cashBefore, execution.cashAfter);
+      if (execution.cashAfter < -tolerance) {
+        showErrors([{ element: null, message: `按实际成交价计算后可用现金为 ${formatCurrency(execution.cashAfter)}，资金不足，不能应用成交结果。` }]);
+        return;
+      }
+
+      const finalCash = Math.max(0, execution.cashAfter);
+      const confirmedTrades = execution.details.filter(({ item }) => item.deltaShares !== 0)
+        .map(({ item, actualPrice }) => `${item.deltaShares > 0 ? "买入" : "卖出"} ${item.name}（${item.code}）${formatInteger(Math.abs(item.deltaShares))} 股，成交价 ${formatPriceInput(actualPrice)}`)
+        .join("\n");
+      if (!window.confirm(`请最后对照券商成交记录：\n\n${confirmedTrades}\n\n确认以上均为已成交记录？写回后可用现金为 ${formatCurrency(finalCash)}。本操作只更新工具持仓，不会向券商下单。`)) return;
+
+      execution.details.forEach(({ item, holdingRow, actualPrice, nextCost }) => {
+        if (!holdingRow) return;
+
+        const sharesInput = holdingRow.querySelector(".current-shares");
+        const costInput = holdingRow.querySelector(".cost-price");
+        const priceInput = holdingRow.querySelector(".current-price");
+
+        if (item.deltaShares > 0) {
+          costInput.value = nextCost === null ? "" : formatPriceInput(nextCost);
+        } else if (item.deltaShares < 0 && item.finalShares === 0) {
+          costInput.value = "";
+        }
+
+        sharesInput.value = String(item.finalShares);
+        if (item.deltaShares !== 0) {
+          priceInput.value = formatPriceInput(actualPrice);
+          holdingRow.dataset.source = "manual";
+          holdingRow.dataset.previousClose = "";
+          holdingRow.dataset.quoteTime = "";
+          updateSourceMeta(holdingRow);
+        }
+      });
+
+      elements.cash.value = trimPrice(finalCash);
+      updateRowControls();
+      refreshHoldingMetrics();
+      markUnsaved();
+      const reserveNote = finalCash < lastResult.reservedCash
+        ? `；价格波动已使用部分预留金额，当前低于原预留 ${formatCurrency(lastResult.reservedCash)}`
+        : "";
+      elements.results.hidden = true;
+      lastResult = null;
+      showStatus(`成交结果已应用，持仓和可用现金已更新；手续费按当前费率估算为 ${formatCurrency(execution.totalFees)}${reserveNote}。请保存数据文件。`, "success");
+      elements.body.closest(".holdings-card").scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    }
+
+    function symbolForCode(code) {
+      if (/^5\d{5}$/.test(code)) return `sh${code}`;
+      if (/^1\d{5}$/.test(code)) return `sz${code}`;
+      throw new Error(`代码 ${code} 不在当前支持的沪深 ETF 范围内。`);
+    }
+
+    function parseTencentQuotes(text) {
+      const quotes = new Map();
+      const pattern = /v_(?:sh|sz)(\d{6})="([^"]*)"/g;
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const fields = match[2].split("~");
+        const name = String(fields[1] || "").trim();
+        const code = fields[2] || match[1];
+        const price = Number(fields[3]);
+        const previousClose = Number(fields[4]);
+        const quoteTime = fields[30] || "";
+        if (name && /^\d{6}$/.test(code) && Number.isFinite(price) && price > 0) {
+          quotes.set(code, {
+            name,
+            code,
+            price,
+            previousClose: Number.isFinite(previousClose) && previousClose > 0 ? previousClose : null,
+            quoteTime
+          });
+        }
+      }
+      return quotes;
+    }
+
+    function formatQuoteTime(raw) {
+      if (!/^\d{14}$/.test(raw)) return raw || "时间未知";
+      return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)} ${raw.slice(8, 10)}:${raw.slice(10, 12)}:${raw.slice(12, 14)}`;
+    }
+
+    async function fetchCurrentPrices(options = {}) {
+      const recalculate = options.recalculate === true;
+      const triggerButton = recalculate ? elements.recalculate : elements.fetch;
+      const shouldRestoreTriggerFocus = document.activeElement === triggerButton;
+      clearValidation();
+      const rows = [...elements.body.querySelectorAll("tr")];
+      const errors = [];
+      const requested = [];
+      const seen = new Set();
+
+      rows.forEach((row, index) => {
+        const input = row.querySelector(".asset-code");
+        const code = input.value.trim();
+        if (!/^[15]\d{5}$/.test(code)) {
+          errors.push({ element: input, message: `第 ${index + 1} 行 ETF 代码必须是 1 或 5 开头的 6 位数字。` });
+          return;
+        }
+        if (seen.has(code)) {
+          errors.push({ element: input, message: `ETF 代码 ${code} 重复。` });
+          return;
+        }
+        seen.add(code);
+        requested.push({ row, code, symbol: symbolForCode(code) });
+      });
+
+      if (errors.length) {
+        showErrors(errors);
+        return;
+      }
+
+      const requestRevision = changeRevision;
+      elements.fetch.disabled = true;
+      elements.recalculate.disabled = true;
+      elements.calculate.disabled = true;
+      elements.fetchLabel.textContent = "正在更新……";
+      elements.recalculateLabel.textContent = "正在刷新……";
+      elements.calculateLabel.textContent = "行情更新中……";
+      showStatus(`正在根据 ETF 代码更新 ${requested.length} 个品种的名称和现价……`, "info");
+
+      try {
+        const url = `https://qt.gtimg.cn/q=${requested.map((item) => item.symbol).join(",")}`;
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const buffer = await response.arrayBuffer();
+        const text = new TextDecoder("gbk").decode(buffer);
+        const quotes = parseTencentQuotes(text);
+
+        if (changeRevision !== requestRevision) {
+          showStatus("行情已返回，但更新期间页面数据发生了修改；本次未写入任何名称和现价。", "error");
+          return;
+        }
+
+        const resolvedQuotes = requested.map(({ row, code }) => {
+          if (!row.isConnected) return { row, code, quote: null };
+          const currentCode = row.querySelector(".asset-code").value.trim();
+          return { row, code, quote: currentCode === code ? quotes.get(code) || null : null };
+        });
+        const failedItems = resolvedQuotes.filter((item) => !item.quote);
+
+        // 行情作为一个组合快照原子更新，任何品种失败都不写入，避免新旧价格混算。
+        if (failedItems.length > 0) {
+          failedItems.forEach(({ row }) => {
+            if (row.isConnected) updateSourceMeta(row, true);
+          });
+          showStatus(
+            `行情未更新：${requested.length - failedItems.length} 个品种获取成功，${failedItems.length} 个失败；本次未写入任何名称和现价，原调仓结果保持不变。`,
+            "error"
+          );
+          return;
+        }
+
+        applyingNetworkPrices = true;
+        resolvedQuotes.forEach(({ row, quote }) => {
+          row.querySelector(".asset-name").value = quote.name;
+          row.querySelector(".current-price").value = formatPriceInput(quote.price);
+          row.dataset.previousClose = quote.previousClose ? formatPriceInput(quote.previousClose) : "";
+          row.dataset.source = "network";
+          row.dataset.quoteTime = formatQuoteTime(quote.quoteTime);
+          updateSourceMeta(row);
+        });
+        applyingNetworkPrices = false;
+        refreshHoldingMetrics();
+        invalidateResult();
+        markUnsaved();
+
+        if (!recalculate) {
+          showStatus(`已同步 ${resolvedQuotes.length} 个品种的名称和现价，请点击“计算调仓”生成方案。`, "success");
+        } else {
+          const recalculated = calculateAndRender({ silent: true });
+          if (recalculated) {
+            showStatus(`已同步 ${resolvedQuotes.length} 个品种的名称和现价，并重新计算调仓方案。`, "success");
+          } else {
+            showStatus("名称和现价已更新，但调仓参数有误，未生成新方案。", "error");
+          }
+        }
+      } catch (error) {
+        applyingNetworkPrices = false;
+        showStatus(`行情获取失败：${error.message}。可以保留或手动修改当前价格后继续计算。`, "error");
+      } finally {
+        elements.fetch.disabled = false;
+        elements.recalculate.disabled = false;
+        elements.calculate.disabled = false;
+        elements.fetchLabel.textContent = "更新名称和现价";
+        elements.recalculateLabel.textContent = "刷新现价并重新计算";
+        elements.calculateLabel.textContent = "计算调仓";
+        if (shouldRestoreTriggerFocus
+          && (document.activeElement === document.body || document.activeElement === triggerButton)) {
+          triggerButton.focus();
+        }
+      }
+    }
+
+    function buildCopyText(result) {
+      const lines = [
+        "调仓清单",
+        `总资产：${formatCurrency(result.totalAssets)}`,
+        `调仓后持仓：${formatPercent(result.investedRatio)}`,
+        `预计剩余现金：${formatCurrency(result.cashAfter)}`,
+        ...(result.reservedCash > 0 ? [`最低预留现金：${formatCurrency(result.reservedCash)}`] : []),
+        ""
+      ];
+
+      result.items.forEach((item) => {
+        if (item.deltaShares > 0) {
+          lines.push(`买入 ${item.name}（${item.code}）${formatInteger(item.deltaShares)} 股`);
+        } else if (item.deltaShares < 0) {
+          lines.push(`卖出 ${item.name}（${item.code}）${formatInteger(Math.abs(item.deltaShares))} 股`);
+        } else {
+          lines.push(`${item.name}（${item.code}）保持不动`);
+        }
+      });
+
+      lines.push("", "实际下单前请核对价格及手续费。");
+      return lines.join("\n");
+    }
+
+    async function copyResult() {
+      if (!lastResult) return;
+      try {
+        await navigator.clipboard.writeText(buildCopyText(lastResult));
+        showStatus("操作清单已复制到剪贴板。", "success");
+      } catch (error) {
+        const textarea = document.createElement("textarea");
+        textarea.value = buildCopyText(lastResult);
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+        showStatus("操作清单已复制到剪贴板。", "success");
+      }
+    }
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", minimumFractionDigits: 2 }).format(value);
+    }
+
+    function formatPercent(value) {
+      return new Intl.NumberFormat("zh-CN", { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+    }
+
+    function formatSignedCurrency(value) {
+      const prefix = value > EPSILON ? "+" : "";
+      return `${prefix}${formatCurrency(value)}`;
+    }
+
+    function formatSignedPercent(value) {
+      const prefix = value > 0.0000005 ? "+" : "";
+      return `${prefix}${formatPercent(value)}`;
+    }
+
+    function formatInteger(value) {
+      return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 0 }).format(value);
+    }
+
+    function formatNumber(value, digits = 2) {
+      return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: digits }).format(value);
+    }
+
+    function trimPrice(value) {
+      return Number(value).toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+    }
+
+    // ETF 价格、成本及实际成交价统一展示和保存为三位小数。
+    function formatPriceInput(value) {
+      return Number(value).toFixed(3);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function initialize(state) {
+      elements.cash.value = state.cash ?? 0;
+      elements.reservedCash.value = state.reservedCash ?? 0;
+      elements.feeRate.value = state.feeRate ?? 0;
+      elements.minimumFee.value = state.minimumFee ?? 0;
+      elements.lotSize.value = state.lotSize ?? 100;
+      lastSavedAt = state.savedAt ?? "";
+      updateSaveMeta();
+      elements.body.innerHTML = "";
+      state.assets.slice(0, MAX_ASSETS).forEach(createRow);
+      updateTargetTotal();
+      updateRowControls();
+      refreshHoldingMetrics();
+    }
+
+    elements.addRow.addEventListener("click", () => {
+      if (elements.body.children.length >= MAX_ASSETS) return;
+      createRow({ shares: 0, targetPercent: 0, cost: "", price: "", previousClose: "", source: "manual" });
+      invalidateResult();
+      markUnsaved();
+      elements.body.lastElementChild.querySelector(".asset-code").focus();
+    });
+
+    elements.body.addEventListener("click", (event) => {
+      const clearButton = event.target.closest(".clear-position");
+      if (clearButton && !clearButton.disabled) {
+        const row = clearButton.closest("tr");
+        const targetInput = row.querySelector(".target-percent");
+        const name = row.querySelector(".asset-name").value.trim() || "该品种";
+        targetInput.value = "0";
+        targetInput.removeAttribute("aria-invalid");
+        updateTargetTotal();
+        updateRowControls();
+        refreshHoldingMetrics();
+        invalidateResult();
+        markUnsaved();
+        showStatus(`已将 ${name} 的目标仓位设为 0%，计算后将卖出全部当前持仓。`, "info");
+        return;
+      }
+
+      const removeButton = event.target.closest(".remove-row");
+      if (!removeButton || removeButton.disabled) return;
+      const row = removeButton.closest("tr");
+      const name = row.querySelector(".asset-name").value.trim() || "该品种";
+      if ((Number(row.querySelector(".current-shares").value) || 0) > 0) return;
+      if (!window.confirm(`确定删除 ${name}？`)) return;
+      row.remove();
+      updateRowControls();
+      updateTargetTotal();
+      refreshHoldingMetrics();
+      markUnsaved();
+      invalidateResult();
+    });
+
+    elements.body.addEventListener("input", (event) => {
+      const row = event.target.closest("tr");
+      if (!row) return;
+      event.target.removeAttribute("aria-invalid");
+      if (event.target.classList.contains("current-price") && !applyingNetworkPrices) {
+        row.dataset.source = "manual";
+        row.dataset.previousClose = "";
+        row.dataset.quoteTime = "";
+        updateSourceMeta(row);
+      }
+      if (event.target.classList.contains("asset-code")) {
+        row.querySelector(".asset-name").value = "";
+        row.querySelector(".current-price").value = "";
+        row.dataset.source = "manual";
+        row.dataset.quoteTime = "";
+        row.dataset.previousClose = "";
+        updateSourceMeta(row);
+      }
+      if (event.target.classList.contains("target-percent")) updateTargetTotal();
+      updateRowControls();
+      refreshHoldingMetrics();
+      invalidateResult();
+      markUnsaved();
+    });
+
+    [elements.cash, elements.reservedCash, elements.feeRate, elements.minimumFee, elements.lotSize].forEach((input) => {
+      input.addEventListener("input", () => {
+        input.removeAttribute("aria-invalid");
+        refreshHoldingMetrics();
+        invalidateResult();
+        markUnsaved();
+      });
+    });
+
+    elements.tradeBody.addEventListener("input", (event) => {
+      if (!event.target.classList.contains("execution-price-input")) return;
+      event.target.removeAttribute("aria-invalid");
+      refreshExecutionPreview();
+    });
+
+    elements.orderGroups.addEventListener("input", refreshExecutionChecks);
+    elements.orderGroups.addEventListener("change", refreshExecutionChecks);
+
+    document.addEventListener("blur", (event) => {
+      if (!event.target.matches(".cost-price, .current-price, .execution-price-input")) return;
+      const value = Number(event.target.value);
+      if (!(value >= 0) || !Number.isFinite(value) || event.target.value.trim() === "") return;
+      const formatted = formatPriceInput(value);
+      if (event.target.value === formatted) return;
+      event.target.value = formatted;
+      event.target.dispatchEvent(new Event("input", { bubbles: true }));
+    }, true);
+
+    elements.fetch.addEventListener("click", () => fetchCurrentPrices({ recalculate: false }));
+    elements.recalculate.addEventListener("click", () => fetchCurrentPrices({ recalculate: true }));
+    elements.calculate.addEventListener("click", () => calculateAndRender());
+    elements.startupGate.addEventListener("keydown", trapStartupFocus);
+    elements.startupContinue.addEventListener("click", continueRememberedDataFile);
+    elements.startupOpen.addEventListener("click", openDataFile);
+    elements.startupNew.addEventListener("click", () => void startNewDocument());
+    elements.openData.addEventListener("click", openDataFile);
+    elements.save.addEventListener("click", saveCurrentData);
+    elements.saveAs.addEventListener("click", () => saveDataFile(true));
+    elements.applyExecution.addEventListener("click", applyExecutionResult);
+    elements.copy.addEventListener("click", copyResult);
+    elements.print.addEventListener("click", () => window.print());
+    elements.reset.addEventListener("click", () => {
+      if (!window.confirm("确定新建空白组合？当前输入以及与 JSON 文件的绑定会被清除。")) return;
+      void startNewDocument();
+    });
+
+    initialize(cloneEmptyState());
+    updateSaveMeta();
+    void restoreRememberedDataFile();
+
+    window.addEventListener("beforeunload", (event) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    });
+
+    window.__rebalancerTest = {
+      parseTencentQuotes,
+      optimizePortfolio,
+      normalizeDataFileState,
+      readRawState,
+      openHandleDatabase,
+      isUsableFileHandle,
+      readRememberedFileHandle,
+      rememberDataFileHandle,
+      forgetRememberedFileHandle,
+      hasHandlePermission,
+      showStartupChoices,
+      restoreRememberedDataFile,
+      continueRememberedDataFile,
+      loadDataFileHandle,
+      openDataFile,
+      saveDataFile,
+      startNewDocument
+    };
+  </script>
+</body>
+</html>
