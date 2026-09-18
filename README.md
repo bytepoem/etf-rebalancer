@@ -1,6 +1,10 @@
 # ETF 调仓计算器
 
-桌面浏览器使用的单文件工具，当前版本 v1.3。按目标仓位、统一交易单位、手续费和预留现金计算调仓方案。
+桌面浏览器使用的单文件工具，当前版本 v1.4。按目标仓位、统一交易单位、手续费和预留现金计算调仓方案。
+
+[小红书关注作者](https://xhslink.cn/o/rXpBcBK0Qy) · [爱发电自愿支持开发](https://afdian.com/a/bytepoem)
+
+部署地址：https://bytepoem-etf-rebalancer.netlify.app/
 
 ## 功能
 

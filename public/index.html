@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>调仓计算器 v1.3</title>
+  <title>调仓计算器 v1.4</title>
   <style>
     :root {
       --page: #f0f6fb;
@@ -209,6 +209,79 @@
       justify-content: space-between;
       gap: var(--space-6);
       margin-bottom: var(--space-5);
+    }
+
+    .creator-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 18px 22px;
+      border: 1px solid #b8cde0;
+      border-radius: 16px;
+      background: linear-gradient(110deg, #e3f1fc, #fff4f5);
+    }
+
+    .creator-banner strong {
+      display: block;
+      font-size: 18px;
+    }
+
+    .creator-banner p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .creator-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .creator-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      color: #fff;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .creator-link svg {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 auto;
+    }
+
+    .creator-link.xiaohongshu {
+      background: #c82649;
+    }
+
+    .creator-link.afdian {
+      background: #7041bd;
+    }
+
+    .creator-link:hover {
+      filter: brightness(0.9);
+    }
+
+    .app-version {
+      display: inline-block;
+      margin-left: 12px;
+      padding: 5px 10px;
+      border: 1px solid #9ed1e9;
+      border-radius: 8px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      font-size: 16px;
+      letter-spacing: 0;
+      vertical-align: middle;
     }
 
     .hero-copy {
@@ -1164,6 +1237,7 @@
       }
 
       .hero,
+      .creator-banner,
       .startup-gate,
       .notice,
       .settings-card,
@@ -1219,6 +1293,26 @@
   <a class="skip-link" id="skip-link" href="#main-content" inert>跳到主要内容</a>
 
   <main class="app-shell" id="main-content" inert>
+    <aside class="creator-banner" aria-label="关注作者与支持开发">
+      <div>
+        <strong>喜欢这个工具？关注 bytepoem</strong>
+        <p>小红书关注作者 · 爱发电自愿支持开发</p>
+      </div>
+      <nav class="creator-links" aria-label="作者主页">
+        <a class="creator-link xiaohongshu" href="https://xhslink.cn/o/rXpBcBK0Qy" target="_blank" rel="noopener noreferrer">
+          <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h7v16H4V4zm7 0h9v16h-9M7 8h1m6 0h3m-3 4h3" />
+          </svg>
+          小红书 · 关注我
+        </a>
+        <a class="creator-link afdian" href="https://afdian.com/a/bytepoem" target="_blank" rel="noopener noreferrer">
+          <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 2 4 14h7l-1 8 10-12h-7l1-8z" />
+          </svg>
+          爱发电 · 支持开发
+        </a>
+      </nav>
+    </aside>
     <header class="hero">
       <div class="hero-copy">
         <div class="eyebrow">
@@ -1227,7 +1321,7 @@
           </svg>
           Portfolio Rebalancer
         </div>
-        <h1>调仓计算器</h1>
+        <h1>调仓计算器<span class="app-version">v1.4</span></h1>
         <p>按目标仓位百分比分配总资产，整体计算最接近目标且资金不超限的整手调仓方案。</p>
       </div>
       <div class="offline-badge">
